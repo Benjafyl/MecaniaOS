@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5efe4;
+  --foreground: #1d1a15;
+  --surface: rgba(255, 250, 240, 0.92);
+  --surface-strong: #ece4d6;
+  --border: rgba(58, 48, 39, 0.1);
+  --border-strong: rgba(58, 48, 39, 0.16);
+  --accent: #c85c2a;
+  --accent-strong: #9f431a;
+  --success: #0e4f52;
+  --info: #124d96;
+  --muted: #857b70;
+  --muted-strong: #5d544b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --font-sans: var(--font-manrope);
+  --font-heading: var(--font-space-grotesk);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  min-height: 100vh;
   background: var(--background);
+  background-image:
+    radial-gradient(circle at top left, rgba(200, 92, 42, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(14, 79, 82, 0.08), transparent 22%),
+    linear-gradient(180deg, #f7f1e7 0%, #f1eadf 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(200, 92, 42, 0.2);
+}
+
+.font-heading {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+.data-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .data-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .data-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

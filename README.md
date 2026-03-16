@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MecaniaOS
 
-## Getting Started
+MVP de un sistema de seguimiento de mantenciones mecanicas para talleres.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js 16
+- TypeScript
+- Prisma 6.18
+- PostgreSQL
+- Tailwind CSS 4
+- Zod
+- Autenticacion por sesion con cookie `httpOnly`
+
+## Arquitectura
+
+Se usa un monolito modular: la UI y la API viven en el mismo proyecto, pero la logica de negocio queda separada por dominios dentro de `src/modules`.
+
+Documentacion base:
+
+- `docs/architecture.md`
+- `docs/implementation-plan.md`
+
+## Estructura
+
+```text
+.
+|-- docs/
+|-- prisma/
+|-- src/
+|   |-- app/
+|   |   |-- api/
+|   |   |-- login/
+|   |   `-- (protected)/
+|   |-- components/
+|   |-- lib/
+|   `-- modules/
+|-- .env.example
+`-- README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Modulos implementados en Sprint 1
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Autenticacion
+- Clientes
+- Vehiculos
+- Ordenes de trabajo
+- Estados de reparacion
+- Historial tecnico
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variables de entorno
 
-## Learn More
+Crear `.env` o `.env.local` usando `.env.example` como base:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/mecaniaos?schema=public"
+SESSION_SECRET="replace-this-with-a-long-random-secret"
+APP_URL="http://localhost:3000"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+En este repo ya deje una `.env.local` para desarrollo local con PostgreSQL en Docker.
+El contenedor de MecaniaOS usa el puerto host `5433` para no chocar con otros proyectos.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Ejecucion local
 
-## Deploy on Vercel
+1. Instalar dependencias:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm install
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Levantar PostgreSQL con Docker:
+
+```bash
+pnpm docker:db:up
+```
+
+3. Generar cliente de Prisma:
+
+```bash
+pnpm db:generate
+```
+
+4. Crear la base o aplicar esquema:
+
+```bash
+pnpm db:push
+```
+
+5. Cargar datos de prueba:
+
+```bash
+pnpm db:seed
+```
+
+6. Levantar la aplicacion:
+
+```bash
+pnpm dev
+```
+
+## Flujo con Docker
+
+Uso recomendado para desarrollo de equipo:
+
+- App local con `pnpm dev`
+- Base de datos en Docker con `pnpm docker:db:up`
+
+Comandos utiles:
+
+- `pnpm docker:db:up`
+- `pnpm docker:db:down`
+- `pnpm docker:db:logs`
+
+Tambien deje preparada una imagen de la app:
+
+```bash
+pnpm docker:app:up
+```
+
+Eso levanta `db` y `app` juntos en contenedores.
+
+## Credenciales seed
+
+- Administrador: `admin@mecaniaos.local` / `Admin1234!`
+- Mecanico: `mecanico@mecaniaos.local` / `Mechanic1234!`
+
+## Scripts
+
+- `pnpm dev`
+- `pnpm build`
+- `pnpm start`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm db:generate`
+- `pnpm db:push`
+- `pnpm db:migrate`
+- `pnpm db:seed`
+- `pnpm studio`
+- `pnpm docker:db:up`
+- `pnpm docker:db:down`
+- `pnpm docker:db:logs`
+- `pnpm docker:app:up`
+- `pnpm docker:app:down`
+
+## Endpoints base
+
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/clients`
+- `POST /api/clients`
+- `GET /api/clients/:id`
+- `PATCH /api/clients/:id`
+- `GET /api/vehicles`
+- `POST /api/vehicles`
+- `GET /api/vehicles/:id`
+- `PATCH /api/vehicles/:id`
+- `GET /api/vehicles/search?vin=...&plate=...`
+- `GET /api/vehicles/:id/history`
+- `GET /api/vehicles/history/search?vin=...`
+- `GET /api/work-orders`
+- `POST /api/work-orders`
+- `GET /api/work-orders/:id`
+- `PATCH /api/work-orders/:id`
+- `PATCH /api/work-orders/:id/status`
+
+## Siguiente fase sugerida
+
+- Inventario basico
+- Cotizaciones
+- Evidencias fotograficas
+- Portal cliente

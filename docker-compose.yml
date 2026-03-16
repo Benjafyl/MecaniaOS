@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mecaniaos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mecaniaos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - mecaniaos_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mecaniaos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mecaniaos-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+      SESSION_SECRET: replace-this-with-a-long-random-secret-123
+      APP_URL: http://localhost:3000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  mecaniaos_postgres_data:
