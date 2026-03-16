@@ -29,7 +29,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -62,7 +62,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
 
       <div className="space-y-4">
         {workOrders.map((order) => (
-          <Card className="rounded-[28px]" key={order.id}>
+          <Card className="rounded-xl" key={order.id}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="flex items-center gap-3">
@@ -82,7 +82,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 <p className="text-sm text-[color:var(--muted)]">
                   Estado {WORK_ORDER_STATUS_LABELS[order.status]}
                 </p>
-                <Link className="text-sm font-semibold text-[color:var(--accent)]" href={`/work-orders/${order.id}`}>
+                <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/work-orders/${order.id}`}>
                   Abrir orden
                 </Link>
               </div>
@@ -91,7 +91,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
         ))}
 
         {workOrders.length === 0 ? (
-          <Card className="rounded-[28px] text-center">
+          <Card className="rounded-xl text-center">
             <p className="text-[color:var(--muted-strong)]">
               No hay ordenes de trabajo con esos filtros.
             </p>
@@ -101,3 +101,4 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
     </div>
   );
 }
+

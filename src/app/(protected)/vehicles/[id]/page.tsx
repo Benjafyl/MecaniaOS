@@ -27,7 +27,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -51,7 +51,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <h2 className="font-heading text-2xl font-semibold">Datos del vehiculo</h2>
 
           <div className="mt-5 space-y-3 text-sm text-[color:var(--muted-strong)]">
@@ -77,7 +77,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
           </div>
         </Card>
 
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="font-heading text-2xl font-semibold">Historial tecnico</h2>
@@ -85,7 +85,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
                 Servicios y reparaciones previas del vehiculo.
               </p>
             </div>
-            <div className="rounded-full bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
+            <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
               {vehicle.workOrders.length} ordenes
             </div>
           </div>
@@ -96,7 +96,7 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
 
               return (
                 <Link
-                  className="block rounded-[24px] border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
+                  className="block rounded-lg border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
                   href={`/work-orders/${order.id}`}
                   key={order.id}
                 >

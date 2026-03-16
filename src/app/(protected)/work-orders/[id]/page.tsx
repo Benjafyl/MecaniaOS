@@ -28,7 +28,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -58,7 +58,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
       <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <div className="space-y-6">
-          <Card className="rounded-[32px]">
+          <Card className="rounded-2xl">
             <h2 className="font-heading text-2xl font-semibold">Resumen tecnico</h2>
 
             <div className="mt-5 space-y-3 text-sm text-[color:var(--muted-strong)]">
@@ -85,7 +85,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
             </div>
           </Card>
 
-          <Card className="rounded-[32px]">
+          <Card className="rounded-2xl">
             <h2 className="font-heading text-2xl font-semibold">Cambiar estado</h2>
             <p className="mt-2 text-sm text-[color:var(--muted)]">
               Cada cambio queda registrado para trazabilidad.
@@ -97,7 +97,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
           </Card>
         </div>
 
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <h2 className="font-heading text-2xl font-semibold">Bitacora de estados</h2>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
             Historial cronologico de la reparacion.
@@ -106,7 +106,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
           <div className="mt-6 space-y-4">
             {workOrder.statusLogs.map((log) => (
               <div
-                className="rounded-[24px] border border-[color:var(--border)] bg-white/70 p-4"
+                className="rounded-lg border border-[color:var(--border)] bg-white/70 p-4"
                 key={log.id}
               >
                 <div className="flex flex-wrap items-center gap-3">

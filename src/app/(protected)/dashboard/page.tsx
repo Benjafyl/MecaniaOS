@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <section className="data-grid">
         {stats.map((stat) => (
-          <Card className="rounded-[30px]" key={stat.key}>
+          <Card className="rounded-xl" key={stat.key}>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
               {stat.label}
             </p>
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
           <div className="mt-6 space-y-4">
             {summary.latestOrders.map((order) => (
               <div
-                className="flex flex-col gap-4 rounded-[24px] border border-[color:var(--border)] bg-white/65 p-4 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-white/[0.65] p-4 md:flex-row md:items-center md:justify-between"
                 key={order.id}
               >
                 <div>
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
                   <p className="text-sm text-[color:var(--muted)]">
                     Ingreso {formatDate(order.intakeDate)}
                   </p>
-                  <Link className="text-sm font-semibold text-[color:var(--accent)]" href={`/work-orders/${order.id}`}>
+                  <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/work-orders/${order.id}`}>
                     Ver detalle
                   </Link>
                 </div>
@@ -78,22 +78,22 @@ export default async function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
             Foco de hoy
           </p>
           <h3 className="mt-2 font-heading text-2xl font-semibold">Semaforo operativo</h3>
 
           <div className="mt-6 space-y-4">
-            <div className="rounded-[24px] bg-[rgba(200,92,42,0.08)] p-5">
+            <div className="rounded-lg border border-[#d7e3f4] bg-[#f3f7fd] p-5">
               <p className="text-sm text-[color:var(--muted-strong)]">Ordenes esperando aprobacion</p>
-              <p className="mt-2 font-heading text-4xl font-semibold text-[color:var(--accent-strong)]">
+              <p className="mt-2 font-heading text-4xl font-semibold text-[#2563eb]">
                 {summary.awaitingApproval}
               </p>
             </div>
-            <div className="rounded-[24px] bg-[rgba(14,79,82,0.08)] p-5">
+            <div className="rounded-lg border border-[#dbe4ef] bg-[#f8fafc] p-5">
               <p className="text-sm text-[color:var(--muted-strong)]">Listas para entrega</p>
-              <p className="mt-2 font-heading text-4xl font-semibold text-[color:var(--success)]">
+              <p className="mt-2 font-heading text-4xl font-semibold text-[#334155]">
                 {summary.readyForDelivery}
               </p>
             </div>
@@ -103,3 +103,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+

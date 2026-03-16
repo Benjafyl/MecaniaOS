@@ -1,18 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5efe4;
-  --foreground: #1d1a15;
-  --surface: rgba(255, 250, 240, 0.92);
-  --surface-strong: #ece4d6;
-  --border: rgba(58, 48, 39, 0.1);
-  --border-strong: rgba(58, 48, 39, 0.16);
-  --accent: #c85c2a;
-  --accent-strong: #9f431a;
-  --success: #0e4f52;
-  --info: #124d96;
-  --muted: #857b70;
-  --muted-strong: #5d544b;
+  --background: #edf3f9;
+  --foreground: #0f172a;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #dbe5f0;
+  --surface-muted: #f7fafe;
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.14);
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --success: #1e3a8a;
+  --info: #2563eb;
+  --muted: #64748b;
+  --muted-strong: #334155;
 }
 
 @theme inline {
@@ -20,6 +21,7 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-strong: var(--surface-strong);
+  --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
@@ -29,7 +31,7 @@
   --color-muted: var(--muted);
   --color-muted-strong: var(--muted-strong);
   --font-sans: var(--font-manrope);
-  --font-heading: var(--font-space-grotesk);
+  --font-heading: var(--font-manrope);
 }
 
 * {
@@ -44,9 +46,8 @@ body {
   min-height: 100vh;
   background: var(--background);
   background-image:
-    radial-gradient(circle at top left, rgba(200, 92, 42, 0.12), transparent 24%),
-    radial-gradient(circle at top right, rgba(14, 79, 82, 0.08), transparent 22%),
-    linear-gradient(180deg, #f7f1e7 0%, #f1eadf 100%);
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
   color: var(--foreground);
   font-family: var(--font-manrope), sans-serif;
 }
@@ -64,11 +65,11 @@ textarea {
 }
 
 ::selection {
-  background: rgba(200, 92, 42, 0.2);
+  background: rgba(36, 88, 198, 0.18);
 }
 
 .font-heading {
-  font-family: var(--font-space-grotesk), sans-serif;
+  font-family: var(--font-manrope), sans-serif;
 }
 
 .data-grid {
