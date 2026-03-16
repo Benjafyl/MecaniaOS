@@ -23,10 +23,10 @@ export function SidebarNav() {
         return (
           <Link
             className={cn(
-              "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition",
+              "flex w-full items-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
               active
-                ? "bg-[color:var(--accent)] text-white shadow-[0_14px_30px_rgba(200,92,42,0.28)]"
-                : "text-[color:var(--muted-strong)] hover:bg-white/80 hover:text-[color:var(--foreground)]",
+                ? "border-[#4d6d99] bg-[#27466f] !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                : "border-transparent !text-[#d7e5fb] hover:border-[#35567f] hover:bg-[#183557] hover:!text-white",
             )}
             href={link.href}
             key={link.href}

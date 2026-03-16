@@ -18,7 +18,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -43,7 +43,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
       <div className="space-y-4">
         {clients.map((client) => (
-          <Card className="rounded-[28px]" key={client.id}>
+          <Card className="rounded-xl" key={client.id}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="font-heading text-2xl font-semibold">{client.fullName}</h2>
@@ -56,13 +56,13 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-full bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
+                <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
                   {client._count.vehicles} vehiculos
                 </div>
-                <div className="rounded-full bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
+                <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
                   {client._count.workOrders} ordenes
                 </div>
-                <Link className="text-sm font-semibold text-[color:var(--accent)]" href={`/clients/${client.id}`}>
+                <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/clients/${client.id}`}>
                   Ver detalle
                 </Link>
               </div>
@@ -71,7 +71,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
         ))}
 
         {clients.length === 0 ? (
-          <Card className="rounded-[28px] text-center">
+          <Card className="rounded-xl text-center">
             <p className="text-[color:var(--muted-strong)]">
               No hay clientes que coincidan con la busqueda.
             </p>
@@ -81,3 +81,4 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
     </div>
   );
 }
+

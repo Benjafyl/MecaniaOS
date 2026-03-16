@@ -19,7 +19,7 @@ export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPag
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -34,7 +34,7 @@ export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPag
         </div>
       </Card>
 
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <WorkOrderForm
           clients={clients.map((client) => ({
             id: client.id,
@@ -51,3 +51,4 @@ export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPag
     </div>
   );
 }
+

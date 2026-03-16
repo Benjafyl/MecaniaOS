@@ -26,7 +26,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -48,13 +48,13 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <h2 className="font-heading text-2xl font-semibold">Vehiculos asociados</h2>
 
           <div className="mt-5 space-y-3">
             {client.vehicles.map((vehicle) => (
               <Link
-                className="block rounded-[24px] border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
+                className="block rounded-lg border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
                 href={`/vehicles/${vehicle.id}`}
                 key={vehicle.id}
               >
@@ -73,13 +73,13 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
           </div>
         </Card>
 
-        <Card className="rounded-[32px]">
+        <Card className="rounded-2xl">
           <h2 className="font-heading text-2xl font-semibold">Ordenes registradas</h2>
 
           <div className="mt-5 space-y-3">
             {client.workOrders.map((order) => (
               <Link
-                className="block rounded-[24px] border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
+                className="block rounded-lg border border-[color:var(--border)] bg-white/70 p-4 transition hover:border-[color:var(--border-strong)]"
                 href={`/work-orders/${order.id}`}
                 key={order.id}
               >

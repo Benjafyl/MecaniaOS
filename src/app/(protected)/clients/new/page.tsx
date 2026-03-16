@@ -7,7 +7,7 @@ import { ClientForm } from "@/app/(protected)/clients/client-form";
 export default function NewClientPage() {
   return (
     <div className="space-y-6">
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -22,9 +22,10 @@ export default function NewClientPage() {
         </div>
       </Card>
 
-      <Card className="rounded-[32px]">
+      <Card className="rounded-2xl">
         <ClientForm />
       </Card>
     </div>
   );
 }
+
