@@ -13,6 +13,25 @@ enum UserRole {
   CUSTOMER
 }
 
+enum VehicleFuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+  LPG
+  CNG
+  FLEX
+  OTHER
+}
+
+enum VehicleTransmissionType {
+  MANUAL
+  AUTOMATIC
+  CVT
+  DUAL_CLUTCH
+  OTHER
+}
+
 enum WorkOrderStatus {
   RECEIVED
   IN_DIAGNOSIS
@@ -25,19 +44,121 @@ enum WorkOrderStatus {
   CANCELLED
 }
 
+enum SelfInspectionStatus {
+  DRAFT
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  REVIEWED
+  CONVERTED_TO_WORK_ORDER
+  CANCELLED
+}
+
+enum SelfInspectionRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SelfInspectionReason {
+  PREVENTIVE_MAINTENANCE
+  MECHANICAL_FAILURE
+  STRANGE_NOISE
+  DASHBOARD_WARNING_LIGHTS
+  COLLISION_DAMAGE
+  BODY_PAINT_DAMAGE
+  PRE_PURCHASE
+  OTHER
+}
+
+enum SelfInspectionSource {
+  CUSTOMER_PORTAL
+  SECURE_LINK
+  STAFF_ASSISTED
+}
+
+enum SelfInspectionAnswerType {
+  BOOLEAN
+  SINGLE_CHOICE
+  MULTI_CHOICE
+  TEXT
+  LONG_TEXT
+  NUMBER
+  DATE
+}
+
+enum SelfInspectionPhotoType {
+  FRONTAL_FULL
+  REAR_FULL
+  LEFT_SIDE_FULL
+  RIGHT_SIDE_FULL
+  DASHBOARD_ON
+  ODOMETER
+  FRONT_LEFT_TIRE
+  FRONT_RIGHT_TIRE
+  REAR_LEFT_TIRE
+  REAR_RIGHT_TIRE
+  PRIMARY_DAMAGE
+  DAMAGE_CONTEXT
+  ENGINE
+  TRUNK
+  FRONT_INTERIOR
+  REAR_INTERIOR
+  VEHICLE_DOCUMENTS
+  COLLISION_ZONE
+  FLUID_LEAK
+  DASHBOARD_WARNING_DETAIL
+  BROKEN_PART
+  VIN_VISIBLE
+  OTHER
+}
+
+enum SelfInspectionNoteType {
+  CUSTOMER_OBSERVATION
+  CUSTOMER_BACKGROUND
+  CUSTOMER_INSTRUCTION
+  CUSTOMER_AVAILABILITY
+  INTERNAL_REVIEW
+  SYSTEM_SUMMARY
+}
+
+enum SelfInspectionDepartment {
+  MECHANICS
+  BODY_PAINT
+  ELECTRICAL
+  INSURANCE
+  GENERAL_DIAGNOSIS
+}
+
+enum ReviewRecommendedNextStep {
+  SCHEDULE_DIAGNOSTIC
+  REQUEST_TOW
+  REFER_MECHANICS
+  REFER_BODY_PAINT
+  REFER_ELECTRICAL
+  PREPARE_QUOTE
+  REQUEST_MORE_EVIDENCE
+  FOLLOW_UP_CALL
+}
+
 model User {
-  id                String               @id @default(cuid())
-  name              String
-  email             String               @unique
-  passwordHash      String
-  role              UserRole
-  active            Boolean              @default(true)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  sessions          Session[]
-  createdWorkOrders WorkOrder[]          @relation("WorkOrderCreatedBy")
-  updatedWorkOrders WorkOrder[]          @relation("WorkOrderUpdatedBy")
-  statusChanges     WorkOrderStatusLog[]
+  id                          String                    @id @default(cuid())
+  name                        String
+  email                       String                    @unique
+  passwordHash                String
+  role                        UserRole
+  active                      Boolean                   @default(true)
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+  sessions                    Session[]
+  createdWorkOrders           WorkOrder[]               @relation("WorkOrderCreatedBy")
+  updatedWorkOrders           WorkOrder[]               @relation("WorkOrderUpdatedBy")
+  statusChanges               WorkOrderStatusLog[]
+  reviewedSelfInspections     SelfInspection[]          @relation("SelfInspectionReviewer")
+  selfInspectionNotes         SelfInspectionNote[]      @relation("SelfInspectionNoteCreatedBy")
+  selfInspectionReviews       SelfInspectionReview[]    @relation("SelfInspectionReviewReviewedBy")
+  selfInspectionStatusChanges SelfInspectionStatusLog[] @relation("SelfInspectionStatusChangedBy")
 }
 
 model Session {
@@ -53,35 +174,39 @@ model Session {
 }
 
 model Client {
-  id              String      @id @default(cuid())
+  id              String           @id @default(cuid())
   fullName        String
-  localIdentifier String?     @db.VarChar(32)
-  phone           String      @db.VarChar(32)
-  email           String      @db.VarChar(255)
+  localIdentifier String?          @db.VarChar(32)
+  phone           String           @db.VarChar(32)
+  email           String           @db.VarChar(255)
   address         String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   vehicles        Vehicle[]
   workOrders      WorkOrder[]
+  selfInspections SelfInspection[]
 
   @@index([fullName])
   @@index([email])
 }
 
 model Vehicle {
-  id        String      @id @default(cuid())
-  clientId  String
-  plate     String?     @unique @db.VarChar(16)
-  vin       String      @unique @db.VarChar(32)
-  make      String
-  model     String
-  year      Int
-  color     String?
-  mileage   Int?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  client    Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  workOrders WorkOrder[]
+  id              String                   @id @default(cuid())
+  clientId        String
+  plate           String?                  @unique @db.VarChar(16)
+  vin             String                   @unique @db.VarChar(32)
+  make            String
+  model           String
+  year            Int
+  color           String?
+  mileage         Int?
+  fuelType        VehicleFuelType?
+  transmission    VehicleTransmissionType?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  client          Client                   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  workOrders      WorkOrder[]
+  selfInspections SelfInspection[]
 
   @@index([clientId])
   @@index([make, model])
@@ -108,6 +233,7 @@ model WorkOrder {
   createdBy        User                 @relation("WorkOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy        User?                @relation("WorkOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   statusLogs       WorkOrderStatusLog[]
+  selfInspections  SelfInspection[]
 
   @@index([clientId, intakeDate])
   @@index([vehicleId, intakeDate])
@@ -115,15 +241,157 @@ model WorkOrder {
 }
 
 model WorkOrderStatusLog {
-  id             String          @id @default(cuid())
+  id             String           @id @default(cuid())
   workOrderId    String
   previousStatus WorkOrderStatus?
   nextStatus     WorkOrderStatus
   note           String?
   changedById    String
-  changedAt      DateTime        @default(now())
-  workOrder      WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  changedBy      User            @relation(fields: [changedById], references: [id], onDelete: Restrict)
+  changedAt      DateTime         @default(now())
+  workOrder      WorkOrder        @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  changedBy      User             @relation(fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([workOrderId, changedAt])
+}
+
+model SelfInspection {
+  id                    String                         @id @default(cuid())
+  customerId            String
+  vehicleId             String?
+  workOrderId           String?
+  status                SelfInspectionStatus           @default(DRAFT)
+  sourceChannel         SelfInspectionSource           @default(SECURE_LINK)
+  accessTokenHash       String?                        @unique
+  accessTokenExpiresAt  DateTime?
+  inspectionReason      SelfInspectionReason?
+  inspectionReasonOther String?
+  mainComplaint         String?
+  canDrive              Boolean?
+  startedAt             DateTime                       @default(now())
+  submittedAt           DateTime?
+  reviewedAt            DateTime?
+  reviewerId            String?
+  overallRiskLevel      SelfInspectionRiskLevel        @default(LOW)
+  summaryGenerated      String?
+  completionPercent     Int                            @default(0)
+  lastCompletedStep     Int                            @default(1)
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  customer              Client                         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle               Vehicle?                       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  workOrder             WorkOrder?                     @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  reviewer              User?                          @relation("SelfInspectionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  vehicleSnapshot       SelfInspectionVehicleSnapshot?
+  answers               SelfInspectionAnswer[]
+  photos                SelfInspectionPhoto[]
+  notes                 SelfInspectionNote[]
+  reviews               SelfInspectionReview[]
+  statusLogs            SelfInspectionStatusLog[]
+
+  @@index([customerId, createdAt])
+  @@index([vehicleId, createdAt])
+  @@index([status, overallRiskLevel])
+  @@index([submittedAt])
+}
+
+model SelfInspectionVehicleSnapshot {
+  id               String                  @id @default(cuid())
+  selfInspectionId String                  @unique
+  plate            String?                 @db.VarChar(16)
+  vin              String?                 @db.VarChar(32)
+  make             String
+  model            String
+  year             Int
+  color            String?
+  mileage          Int
+  fuelType         VehicleFuelType
+  transmission     VehicleTransmissionType
+  starts           Boolean
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  selfInspection   SelfInspection          @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+
+  @@index([plate])
+  @@index([vin])
+}
+
+model SelfInspectionAnswer {
+  id               String                   @id @default(cuid())
+  selfInspectionId String
+  section          String                   @db.VarChar(64)
+  questionKey      String                   @db.VarChar(80)
+  questionLabel    String                   @db.VarChar(255)
+  answerType       SelfInspectionAnswerType
+  answerValue      Json
+  severity         SelfInspectionRiskLevel?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  selfInspection   SelfInspection           @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+
+  @@unique([selfInspectionId, questionKey])
+  @@index([selfInspectionId, section])
+  @@index([severity])
+}
+
+model SelfInspectionPhoto {
+  id               String                  @id @default(cuid())
+  selfInspectionId String
+  photoType        SelfInspectionPhotoType
+  fileUrl          String
+  storageKey       String                  @unique
+  fileName         String
+  mimeType         String
+  sizeBytes        Int
+  sortOrder        Int                     @default(0)
+  isRequired       Boolean
+  comment          String?
+  createdAt        DateTime                @default(now())
+  selfInspection   SelfInspection          @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+
+  @@index([selfInspectionId, photoType])
+}
+
+model SelfInspectionNote {
+  id               String                 @id @default(cuid())
+  selfInspectionId String
+  noteType         SelfInspectionNoteType
+  content          String
+  createdById      String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  selfInspection   SelfInspection         @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+  createdBy        User?                  @relation("SelfInspectionNoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([selfInspectionId, noteType])
+}
+
+model SelfInspectionReview {
+  id                        String                    @id @default(cuid())
+  selfInspectionId          String
+  reviewedById              String
+  riskAssessment            SelfInspectionRiskLevel
+  internalSummary           String
+  recommendedNextStep       ReviewRecommendedNextStep
+  departmentSuggestion      SelfInspectionDepartment?
+  createWorkOrderSuggestion Boolean                   @default(false)
+  createQuoteSuggestion     Boolean                   @default(false)
+  reviewedAt                DateTime                  @default(now())
+  selfInspection            SelfInspection            @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+  reviewedBy                User                      @relation("SelfInspectionReviewReviewedBy", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([selfInspectionId, reviewedAt])
+}
+
+model SelfInspectionStatusLog {
+  id               String                @id @default(cuid())
+  selfInspectionId String
+  previousStatus   SelfInspectionStatus?
+  nextStatus       SelfInspectionStatus
+  note             String?
+  changedById      String?
+  changedAt        DateTime              @default(now())
+  selfInspection   SelfInspection        @relation(fields: [selfInspectionId], references: [id], onDelete: Cascade)
+  changedBy        User?                 @relation("SelfInspectionStatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([selfInspectionId, changedAt])
 }

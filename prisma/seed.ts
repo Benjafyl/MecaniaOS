@@ -1,9 +1,36 @@
-import { PrismaClient, UserRole, WorkOrderStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  ReviewRecommendedNextStep,
+  SelfInspectionAnswerType,
+  SelfInspectionDepartment,
+  SelfInspectionNoteType,
+  SelfInspectionPhotoType,
+  SelfInspectionReason,
+  SelfInspectionRiskLevel,
+  SelfInspectionSource,
+  SelfInspectionStatus,
+  UserRole,
+  VehicleFuelType,
+  VehicleTransmissionType,
+  WorkOrderStatus,
+} from "@prisma/client";
 import { hash } from "bcryptjs";
+import { createHash } from "node:crypto";
 
 const prisma = new PrismaClient();
 
+function hashAccessToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 async function main() {
+  await prisma.selfInspectionStatusLog.deleteMany();
+  await prisma.selfInspectionReview.deleteMany();
+  await prisma.selfInspectionNote.deleteMany();
+  await prisma.selfInspectionPhoto.deleteMany();
+  await prisma.selfInspectionAnswer.deleteMany();
+  await prisma.selfInspectionVehicleSnapshot.deleteMany();
+  await prisma.selfInspection.deleteMany();
   await prisma.workOrderStatusLog.deleteMany();
   await prisma.workOrder.deleteMany();
   await prisma.vehicle.deleteMany();
@@ -63,6 +90,8 @@ async function main() {
       year: 2020,
       color: "Blanco",
       mileage: 58200,
+      fuelType: VehicleFuelType.GASOLINE,
+      transmission: VehicleTransmissionType.MANUAL,
     },
   });
 
@@ -76,6 +105,8 @@ async function main() {
       year: 2018,
       color: "Gris",
       mileage: 91450,
+      fuelType: VehicleFuelType.GASOLINE,
+      transmission: VehicleTransmissionType.AUTOMATIC,
     },
   });
 
@@ -120,7 +151,7 @@ async function main() {
     },
   });
 
-  await prisma.workOrder.create({
+  const workOrderB = await prisma.workOrder.create({
     data: {
       clientId: clientB.id,
       vehicleId: vehicleB.id,
@@ -161,10 +192,300 @@ async function main() {
     },
   });
 
+  const publicDraftToken = "demo-self-inspection-2026";
+
+  const selfInspectionDraft = await prisma.selfInspection.create({
+    data: {
+      customerId: clientA.id,
+      vehicleId: vehicleA.id,
+      status: SelfInspectionStatus.IN_PROGRESS,
+      sourceChannel: SelfInspectionSource.SECURE_LINK,
+      accessTokenHash: hashAccessToken(publicDraftToken),
+      accessTokenExpiresAt: new Date("2026-04-01T23:59:59.000Z"),
+      inspectionReason: SelfInspectionReason.STRANGE_NOISE,
+      mainComplaint: "Golpeteo delantero al pasar baches y ruido al frenar en baja velocidad",
+      canDrive: true,
+      startedAt: new Date("2026-03-15T12:00:00.000Z"),
+      overallRiskLevel: SelfInspectionRiskLevel.HIGH,
+      summaryGenerated:
+        "Maria Gonzalez reporta ruido delantero al circular y al frenar. Vehiculo Volkswagen Gol LTDK21 con 58.200 km. Riesgo preliminar alto por vibraciones, alerta ABS y ruido de suspension.",
+      completionPercent: 80,
+      lastCompletedStep: 7,
+      vehicleSnapshot: {
+        create: {
+          plate: vehicleA.plate,
+          vin: vehicleA.vin,
+          make: vehicleA.make,
+          model: vehicleA.model,
+          year: vehicleA.year,
+          color: vehicleA.color,
+          mileage: vehicleA.mileage ?? 0,
+          fuelType: VehicleFuelType.GASOLINE,
+          transmission: VehicleTransmissionType.MANUAL,
+          starts: true,
+        },
+      },
+      answers: {
+        create: [
+          {
+            section: "reason",
+            questionKey: "reason_problem_since",
+            questionLabel: "Desde cuando ocurre el problema",
+            answerType: SelfInspectionAnswerType.TEXT,
+            answerValue: "Hace 2 semanas",
+          },
+          {
+            section: "reason",
+            questionKey: "reason_issue_frequency",
+            questionLabel: "El problema es constante o intermitente",
+            answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+            answerValue: "INTERMITTENT",
+          },
+          {
+            section: "reason",
+            questionKey: "reason_can_drive",
+            questionLabel: "El vehiculo puede circular actualmente",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+          },
+          {
+            section: "brakes",
+            questionKey: "brakes_abs_warning",
+            questionLabel: "Se ha encendido luz de frenos o ABS",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+          {
+            section: "steeringSuspension",
+            questionKey: "suspension_knocks",
+            questionLabel: "Escucha golpes al pasar lomos de toro o baches",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+          },
+          {
+            section: "tires",
+            questionKey: "tires_speed_vibration",
+            questionLabel: "Siente vibracion a cierta velocidad",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+        ],
+      },
+      photos: {
+        create: [
+          {
+            photoType: SelfInspectionPhotoType.FRONTAL_FULL,
+            fileUrl: "/next.svg",
+            storageKey: "seed/self-inspections/front-01",
+            fileName: "frontal-demo.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+            sortOrder: 1,
+            isRequired: true,
+          },
+          {
+            photoType: SelfInspectionPhotoType.PRIMARY_DAMAGE,
+            fileUrl: "/window.svg",
+            storageKey: "seed/self-inspections/damage-01",
+            fileName: "dano-demo.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+            sortOrder: 11,
+            isRequired: true,
+          },
+        ],
+      },
+      notes: {
+        create: [
+          {
+            noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
+            content: "[[additionalProblemContext]] El ruido aumenta con el vehiculo cargado.",
+          },
+        ],
+      },
+      statusLogs: {
+        create: [
+          {
+            previousStatus: null,
+            nextStatus: SelfInspectionStatus.DRAFT,
+            note: "Autoinspeccion creada",
+            changedAt: new Date("2026-03-15T12:00:00.000Z"),
+          },
+          {
+            previousStatus: SelfInspectionStatus.DRAFT,
+            nextStatus: SelfInspectionStatus.IN_PROGRESS,
+            note: "Cliente avanzo en el formulario",
+            changedAt: new Date("2026-03-15T12:30:00.000Z"),
+          },
+        ],
+      },
+    },
+  });
+
+  const selfInspectionReviewed = await prisma.selfInspection.create({
+    data: {
+      customerId: clientB.id,
+      vehicleId: vehicleB.id,
+      workOrderId: workOrderB.id,
+      status: SelfInspectionStatus.REVIEWED,
+      sourceChannel: SelfInspectionSource.STAFF_ASSISTED,
+      inspectionReason: SelfInspectionReason.COLLISION_DAMAGE,
+      mainComplaint: "Golpe frontal con desalineacion visible y testigo de motor encendido",
+      canDrive: false,
+      startedAt: new Date("2026-03-12T09:00:00.000Z"),
+      submittedAt: new Date("2026-03-12T10:15:00.000Z"),
+      reviewedAt: new Date("2026-03-12T12:00:00.000Z"),
+      reviewerId: mechanic.id,
+      overallRiskLevel: SelfInspectionRiskLevel.CRITICAL,
+      summaryGenerated:
+        "Juan Perez reporta siniestro frontal reciente. Vehiculo Honda Civic KJRT54 no circulable, con posible afectacion estructural y luz de motor encendida. Riesgo critico y derivacion a carroceria y diagnostico mecanico.",
+      completionPercent: 100,
+      lastCompletedStep: 9,
+      vehicleSnapshot: {
+        create: {
+          plate: vehicleB.plate,
+          vin: vehicleB.vin,
+          make: vehicleB.make,
+          model: vehicleB.model,
+          year: vehicleB.year,
+          color: vehicleB.color,
+          mileage: vehicleB.mileage ?? 0,
+          fuelType: VehicleFuelType.GASOLINE,
+          transmission: VehicleTransmissionType.AUTOMATIC,
+          starts: false,
+        },
+      },
+      answers: {
+        create: [
+          {
+            section: "reason",
+            questionKey: "reason_can_drive",
+            questionLabel: "El vehiculo puede circular actualmente",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: false,
+            severity: SelfInspectionRiskLevel.CRITICAL,
+          },
+          {
+            section: "operational",
+            questionKey: "operational_dashboard_warning_lights",
+            questionLabel: "Tiene testigos encendidos en el tablero",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+          {
+            section: "engine",
+            questionKey: "engine_check_engine_light",
+            questionLabel: "Se ha encendido luz de check engine",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+          {
+            section: "damage",
+            questionKey: "damage_recent_collision",
+            questionLabel: "El vehiculo sufrio choque o roce reciente",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+          {
+            section: "damage",
+            questionKey: "damage_structural_impact",
+            questionLabel: "Se observa posible golpe estructural",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+            severity: SelfInspectionRiskLevel.CRITICAL,
+          },
+        ],
+      },
+      photos: {
+        create: [
+          {
+            photoType: SelfInspectionPhotoType.FRONTAL_FULL,
+            fileUrl: "/next.svg",
+            storageKey: "seed/self-inspections/front-02",
+            fileName: "frontal-golpe.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+            sortOrder: 1,
+            isRequired: true,
+          },
+          {
+            photoType: SelfInspectionPhotoType.DAMAGE_CONTEXT,
+            fileUrl: "/window.svg",
+            storageKey: "seed/self-inspections/context-02",
+            fileName: "contexto-golpe.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+            sortOrder: 12,
+            isRequired: true,
+          },
+        ],
+      },
+      notes: {
+        create: [
+          {
+            noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
+            content: "[[additionalProblemContext]] El cliente indica que el capot no cierra bien tras el choque.",
+          },
+          {
+            noteType: SelfInspectionNoteType.INTERNAL_REVIEW,
+            content: "Revisar soporte frontal, radiador y alineacion estructural antes de mover.",
+            createdById: mechanic.id,
+          },
+        ],
+      },
+      reviews: {
+        create: [
+          {
+            reviewedById: mechanic.id,
+            riskAssessment: SelfInspectionRiskLevel.CRITICAL,
+            internalSummary:
+              "Golpe frontal con posible dano estructural. Vehiculo no apto para circular. Requiere ingreso con grua y diagnostico mixto mecanica/carroceria.",
+            recommendedNextStep: ReviewRecommendedNextStep.REFER_BODY_PAINT,
+            departmentSuggestion: SelfInspectionDepartment.BODY_PAINT,
+            createWorkOrderSuggestion: true,
+            createQuoteSuggestion: true,
+            reviewedAt: new Date("2026-03-12T12:00:00.000Z"),
+          },
+        ],
+      },
+      statusLogs: {
+        create: [
+          {
+            previousStatus: null,
+            nextStatus: SelfInspectionStatus.DRAFT,
+            note: "Autoinspeccion creada",
+            changedAt: new Date("2026-03-12T09:00:00.000Z"),
+          },
+          {
+            previousStatus: SelfInspectionStatus.DRAFT,
+            nextStatus: SelfInspectionStatus.SUBMITTED,
+            note: "Autoinspeccion enviada por cliente",
+            changedAt: new Date("2026-03-12T10:15:00.000Z"),
+          },
+          {
+            previousStatus: SelfInspectionStatus.SUBMITTED,
+            nextStatus: SelfInspectionStatus.REVIEWED,
+            note: "Revision interna registrada",
+            changedById: mechanic.id,
+            changedAt: new Date("2026-03-12T12:00:00.000Z"),
+          },
+        ],
+      },
+    },
+  });
+
   console.log("Seed listo");
   console.log(`Admin: admin@mecaniaos.local / Admin1234!`);
   console.log(`Mecanico: mecanico@mecaniaos.local / Mechanic1234!`);
   console.log(`Orden activa de referencia: ${workOrderA.orderNumber}`);
+  console.log(`Autoinspeccion borrador: ${selfInspectionDraft.id}`);
+  console.log(`Enlace seguro demo: /self-inspections/start/${publicDraftToken}`);
+  console.log(`Autoinspeccion revisada: ${selfInspectionReviewed.id}`);
 }
 
 main()
