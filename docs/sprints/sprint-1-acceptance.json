@@ -1,0 +1,74 @@
+[
+  {
+    "key": "MOS-1",
+    "description": "Como administrador, quiero registrar clientes para asociarlos a vehiculos y servicios.\n\nAcceptance Criteria:\n- El formulario solicita al menos nombre completo, telefono y correo electronico.\n- El sistema valida los campos obligatorios antes de guardar.\n- El cliente queda registrado y disponible para asociar vehiculos y ordenes de trabajo.\n- El listado de clientes refleja el nuevo registro luego del guardado."
+  },
+  {
+    "key": "MOS-2",
+    "description": "Como mecanico, quiero registrar vehiculos por VIN para mantener historial tecnico.\n\nAcceptance Criteria:\n- El formulario permite asociar el vehiculo a un cliente existente.\n- El sistema solicita al menos VIN, marca, modelo y anio.\n- El VIN debe ser unico y validarse antes de guardar.\n- El vehiculo registrado queda disponible para ordenes de trabajo e historial tecnico."
+  },
+  {
+    "key": "MOS-3",
+    "description": "Como mecanico, quiero crear una orden de trabajo para registrar la mantencion del vehiculo.\n\nAcceptance Criteria:\n- La orden de trabajo se puede crear seleccionando cliente y vehiculo existentes.\n- El sistema solicita al menos motivo de ingreso y fecha de ingreso.\n- Al crear la orden, se genera un numero identificador unico.\n- La orden creada queda visible en el listado general y en el detalle del vehiculo."
+  },
+  {
+    "key": "MOS-4",
+    "description": "Como mecanico, quiero actualizar el estado del servicio para informar el progreso.\n\nAcceptance Criteria:\n- Una orden de trabajo permite cambiar su estado dentro del flujo definido.\n- Cada cambio de estado queda reflejado inmediatamente en la vista de la orden.\n- El sistema conserva un historial de cambios de estado con fecha.\n- El estado actualizado aparece en los listados y vistas relacionadas."
+  },
+  {
+    "key": "MOS-5",
+    "description": "Como mecanico, quiero revisar el historial del vehiculo para diagnosticar mejor.\n\nAcceptance Criteria:\n- Desde el vehiculo se puede consultar el historial de ordenes de trabajo previas.\n- El historial muestra al menos fecha, motivo y estado de cada orden.\n- La informacion se presenta ordenada de la mas reciente a la mas antigua.\n- El historial se puede consultar sin editar registros previos."
+  },
+  {
+    "key": "MOS-46",
+    "description": "Como cliente, quiero recibir un enlace seguro para acceder a mi autoinspeccion, para completar el proceso sin necesidad de credenciales complejas.\n\nAcceptance Criteria:\n- El sistema puede generar un enlace unico asociado a una autoinspeccion.\n- El enlace permite acceder al flujo de autoinspeccion sin iniciar sesion tradicional.\n- El enlace queda asociado al cliente o vehiculo correcto.\n- Si el enlace no existe o no es valido, el sistema bloquea el acceso."
+  },
+  {
+    "key": "MOS-47",
+    "description": "Como cliente, quiero completar un formulario guiado de autoinspeccion, para reportar el estado de mi vehiculo de forma clara y estructurada.\n\nAcceptance Criteria:\n- El flujo de autoinspeccion muestra pasos o secciones claramente diferenciadas.\n- El cliente puede responder preguntas clave del estado del vehiculo.\n- El sistema guarda las respuestas estructuradas por seccion o pregunta.\n- El progreso de la autoinspeccion permite identificar el avance actual."
+  },
+  {
+    "key": "MOS-48",
+    "description": "Como cliente, quiero subir fotos de mi vehiculo durante la autoinspeccion, para que el taller pueda evaluar visualmente los danos.\n\nAcceptance Criteria:\n- El flujo exige cargar las fotos obligatorias definidas por la autoinspeccion.\n- El sistema valida formato y tamano basico de los archivos antes de guardar.\n- Cada foto queda asociada a la autoinspeccion correcta.\n- Las fotos cargadas quedan visibles para revision posterior del taller."
+  },
+  {
+    "key": "MOS-49",
+    "description": "Como cliente, quiero guardar mi autoinspeccion sin terminar, para poder continuarla posteriormente.\n\nAcceptance Criteria:\n- El cliente puede guardar una autoinspeccion incompleta sin enviarla al taller.\n- El sistema conserva respuestas, fotos y avances ya ingresados.\n- Al reingresar con el enlace, la autoinspeccion se retoma desde el estado guardado.\n- Una autoinspeccion en borrador no debe marcarse como enviada."
+  },
+  {
+    "key": "MOS-50",
+    "description": "Como cliente, quiero enviar la autoinspeccion completa, para que el taller pueda iniciar el diagnostico del vehiculo.\n\nAcceptance Criteria:\n- El cliente puede enviar la autoinspeccion solo cuando los datos requeridos estan completos.\n- Al enviar, el estado de la autoinspeccion cambia a enviado o equivalente.\n- Una vez enviada, la autoinspeccion queda disponible para revision interna.\n- El sistema evita envios duplicados accidentales."
+  },
+  {
+    "key": "MOS-51",
+    "description": "Como mecanico, quiero revisar la autoinspeccion enviada por el cliente, para analizar el estado del vehiculo antes de su ingreso al taller.\n\nAcceptance Criteria:\n- El usuario interno puede abrir el detalle completo de una autoinspeccion enviada.\n- La revision muestra respuestas, fotos y datos principales del vehiculo.\n- La pantalla permite registrar observaciones o una conclusion inicial.\n- El resultado de la revision queda persistido para consulta posterior."
+  },
+  {
+    "key": "MOS-52",
+    "description": "Como mecanico, quiero adjuntar imagenes a una orden, para documentar la reparacion.\n\nAcceptance Criteria:\n- Una orden de trabajo permite adjuntar una o mas evidencias visuales.\n- Cada evidencia queda asociada a la orden correcta.\n- El sistema registra al menos archivo, fecha y contexto basico de la evidencia.\n- Las evidencias adjuntas quedan disponibles para visualizacion posterior."
+  },
+  {
+    "key": "MOS-53",
+    "description": "Como usuario interno, quiero ver todas las evidencias, para analizar el historial visual.\n\nAcceptance Criteria:\n- El usuario interno puede visualizar las evidencias asociadas a una orden o autoinspeccion.\n- La interfaz muestra las evidencias de forma ordenada y accesible.\n- Cada evidencia conserva su contexto de origen.\n- La consulta de evidencias no requiere modificar la informacion almacenada."
+  },
+  {
+    "key": "MOS-54",
+    "description": "Como administrador, quiero crear usuarios internos en el sistema, para permitir el acceso controlado de los miembros del taller.\n\nAcceptance Criteria:\n- El administrador puede registrar un usuario interno con nombre, correo y credenciales iniciales.\n- El correo del usuario debe ser unico dentro del sistema.\n- El usuario creado queda habilitado para iniciar sesion segun su estado.\n- El registro de usuarios internos queda disponible para administracion posterior."
+  },
+  {
+    "key": "MOS-55",
+    "description": "Como administrador, quiero asignar roles a los usuarios del sistema, para definir sus permisos y responsabilidades dentro de la plataforma.\n\nAcceptance Criteria:\n- Cada usuario interno puede tener un rol valido definido por el sistema.\n- El rol asignado queda persistido y visible en el perfil o listado del usuario.\n- El administrador puede cambiar el rol de un usuario existente.\n- Los cambios de rol impactan los permisos aplicados en la plataforma."
+  },
+  {
+    "key": "MOS-56",
+    "description": "Como sistema, quiero restringir el acceso a funcionalidades segun el rol del usuario, para garantizar la seguridad y correcta operacion del sistema.\n\nAcceptance Criteria:\n- Las rutas o acciones protegidas validan la sesion del usuario.\n- El sistema permite o bloquea funcionalidades segun el rol configurado.\n- Un usuario sin permisos recibe una respuesta de acceso denegado.\n- La restriccion aplica tanto a vistas como a operaciones sensibles."
+  },
+  {
+    "key": "MOS-57",
+    "description": "Como mecanico, quiero ver mis ordenes asignadas, para gestionar mi trabajo.\n\nAcceptance Criteria:\n- El mecanico puede acceder a una vista filtrada de ordenes relevantes para su trabajo.\n- La vista muestra al menos numero de orden, vehiculo, estado y fecha.\n- El mecanico no debe ver funcionalidades reservadas a administracion.\n- Desde esa vista puede abrir el detalle de una orden permitida."
+  },
+  {
+    "key": "MOS-58",
+    "description": "Como jefe de operaciones, quiero ver todas las ordenes, para supervisar el taller.\n\nAcceptance Criteria:\n- El jefe de operaciones puede ver el listado completo de ordenes de trabajo.\n- La vista permite identificar estado, cliente, vehiculo y fechas principales.\n- El acceso incluye supervision global y no solo ordenes individuales.\n- El rol puede entrar al detalle de cualquier orden para seguimiento."
+  }
+]

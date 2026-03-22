@@ -11,6 +11,7 @@ import {
   WORK_ORDER_STATUS_OPTIONS,
   WORK_ORDER_STATUS_LABELS,
 } from "@/modules/work-orders/work-order.constants";
+import { getCurrentSession } from "@/modules/auth/auth.service";
 import { listWorkOrders } from "@/modules/work-orders/work-order.service";
 
 type WorkOrdersPageProps = {
@@ -22,9 +23,12 @@ type WorkOrdersPageProps = {
 
 export default async function WorkOrdersPage({ searchParams }: WorkOrdersPageProps) {
   const { q, status } = await searchParams;
+  const session = await getCurrentSession();
   const workOrders = await listWorkOrders({
     search: q,
     status,
+    actorId: session?.user.id,
+    actorRole: session?.user.role,
   });
 
   return (
@@ -71,6 +75,9 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 </div>
                 <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
                   {order.client.fullName} / {order.vehicle.make} {order.vehicle.model}
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">
+                  Tecnico: {order.assignedTechnician?.name ?? "Sin asignar"}
                 </p>
                 <p className="mt-1 text-sm text-[color:var(--muted)]">{order.reason}</p>
               </div>

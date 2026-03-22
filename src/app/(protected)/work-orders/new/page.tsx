@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { listClients } from "@/modules/clients/client.service";
+import { getAssignableMechanics } from "@/modules/work-orders/work-order.service";
 import { listVehicles } from "@/modules/vehicles/vehicle.service";
 import { WorkOrderForm } from "@/app/(protected)/work-orders/work-order-form";
 
@@ -15,7 +16,11 @@ type NewWorkOrderPageProps = {
 
 export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPageProps) {
   const { clientId, vehicleId } = await searchParams;
-  const [clients, vehicles] = await Promise.all([listClients(), listVehicles()]);
+  const [clients, vehicles, mechanics] = await Promise.all([
+    listClients(),
+    listVehicles(),
+    getAssignableMechanics(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -39,6 +44,10 @@ export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPag
           clients={clients.map((client) => ({
             id: client.id,
             fullName: client.fullName,
+          }))}
+          mechanics={mechanics.map((mechanic) => ({
+            id: mechanic.id,
+            name: mechanic.name,
           }))}
           defaultClientId={clientId}
           defaultVehicleId={vehicleId}

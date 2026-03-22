@@ -6,6 +6,7 @@ import { optionalDateOnly, optionalText, requiredText } from "@/lib/validation";
 export const createWorkOrderSchema = z.object({
   clientId: requiredText(1, 40),
   vehicleId: requiredText(1, 40),
+  assignedTechnicianId: optionalText(40),
   reason: requiredText(5, 500),
   initialDiagnosis: optionalText(1000),
   status: z.nativeEnum(WorkOrderStatus).default(WorkOrderStatus.RECEIVED),
@@ -21,4 +22,8 @@ export const updateWorkOrderSchema = createWorkOrderSchema
 export const updateWorkOrderStatusSchema = z.object({
   status: z.nativeEnum(WorkOrderStatus),
   note: optionalText(500),
+});
+
+export const updateWorkOrderAssignmentSchema = z.object({
+  assignedTechnicianId: optionalText(40),
 });

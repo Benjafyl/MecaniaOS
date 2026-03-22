@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 import { cn } from "@/lib/utils";
 
-const links = [
+const baseLinks = [
   { href: "/dashboard", label: "Panel" },
   { href: "/clients", label: "Clientes" },
   { href: "/vehicles", label: "Vehiculos" },
@@ -13,8 +14,12 @@ const links = [
   { href: "/work-orders", label: "Ordenes" },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const links =
+    role === UserRole.ADMIN
+      ? [...baseLinks, { href: "/users", label: "Usuarios" }]
+      : baseLinks;
 
   return (
     <nav className="space-y-2">

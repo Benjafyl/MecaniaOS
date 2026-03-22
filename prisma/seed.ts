@@ -32,6 +32,7 @@ async function main() {
   await prisma.selfInspectionVehicleSnapshot.deleteMany();
   await prisma.selfInspection.deleteMany();
   await prisma.workOrderStatusLog.deleteMany();
+  await prisma.workOrderEvidence.deleteMany();
   await prisma.workOrder.deleteMany();
   await prisma.vehicle.deleteMany();
   await prisma.client.deleteMany();
@@ -123,6 +124,7 @@ async function main() {
       notes: "Revisar discos y liquido de frenos",
       createdById: admin.id,
       updatedById: mechanic.id,
+      assignedTechnicianId: mechanic.id,
       statusLogs: {
         create: [
           {
@@ -164,6 +166,7 @@ async function main() {
       notes: "Incluye inspeccion general",
       createdById: mechanic.id,
       updatedById: mechanic.id,
+      assignedTechnicianId: mechanic.id,
       statusLogs: {
         create: [
           {
@@ -190,6 +193,31 @@ async function main() {
         ],
       },
     },
+  });
+
+  await prisma.workOrderEvidence.createMany({
+    data: [
+      {
+        workOrderId: workOrderA.id,
+        uploadedById: mechanic.id,
+        fileUrl: "/next.svg",
+        storageKey: "seed/work-orders/ot-2026-0001-evidence-1",
+        fileName: "frenos-frontal.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 123456,
+        note: "Desgaste visible en componentes delanteros",
+      },
+      {
+        workOrderId: workOrderB.id,
+        uploadedById: mechanic.id,
+        fileUrl: "/window.svg",
+        storageKey: "seed/work-orders/ot-2026-0002-evidence-1",
+        fileName: "mantencion-aceite.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 123456,
+        note: "Registro visual del servicio de mantencion",
+      },
+    ],
   });
 
   const publicDraftToken = "demo-self-inspection-2026";

@@ -21,6 +21,10 @@ type WorkOrderFormProps = {
     id: string;
     label: string;
   }>;
+  mechanics: Array<{
+    id: string;
+    name: string;
+  }>;
   defaultClientId?: string;
   defaultVehicleId?: string;
 };
@@ -28,6 +32,7 @@ type WorkOrderFormProps = {
 export function WorkOrderForm({
   clients,
   vehicles,
+  mechanics,
   defaultClientId,
   defaultVehicleId,
 }: WorkOrderFormProps) {
@@ -83,6 +88,23 @@ export function WorkOrderForm({
             name="initialDiagnosis"
             placeholder="Observaciones del mecanico al recibir el vehiculo"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label
+            className="text-sm font-medium text-[color:var(--muted-strong)]"
+            htmlFor="assignedTechnicianId"
+          >
+            Tecnico asignado
+          </label>
+          <Select id="assignedTechnicianId" name="assignedTechnicianId">
+            <option value="">Sin asignar</option>
+            {mechanics.map((mechanic) => (
+              <option key={mechanic.id} value={mechanic.id}>
+                {mechanic.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="space-y-2">

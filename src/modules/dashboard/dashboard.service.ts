@@ -1,14 +1,23 @@
-import { WorkOrderStatus } from "@prisma/client";
+import { UserRole, WorkOrderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
-export async function getDashboardSummary() {
+export async function getDashboardSummary(input?: { actorId?: string; actorRole?: UserRole }) {
+  const workOrderWhere: Prisma.WorkOrderWhereInput =
+    input?.actorRole === UserRole.MECHANIC && input.actorId
+      ? {
+          assignedTechnicianId: input.actorId,
+        }
+      : {};
+
   const [clients, vehicles, activeOrders, awaitingApproval, readyForDelivery, latestOrders] =
     await Promise.all([
       prisma.client.count(),
       prisma.vehicle.count(),
       prisma.workOrder.count({
         where: {
+          ...workOrderWhere,
           status: {
             in: [
               WorkOrderStatus.RECEIVED,
@@ -24,15 +33,18 @@ export async function getDashboardSummary() {
       }),
       prisma.workOrder.count({
         where: {
+          ...workOrderWhere,
           status: WorkOrderStatus.WAITING_APPROVAL,
         },
       }),
       prisma.workOrder.count({
         where: {
+          ...workOrderWhere,
           status: WorkOrderStatus.READY_FOR_DELIVERY,
         },
       }),
       prisma.workOrder.findMany({
+        where: workOrderWhere,
         include: {
           client: true,
           vehicle: true,

@@ -42,7 +42,7 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
         </div>
 
         <div className="mt-6 flex-1">
-          <SidebarNav />
+          <SidebarNav role={user.role} />
         </div>
 
         <div className="mt-6 rounded-xl border border-[#2e4b74] bg-[#1a3457] p-4">

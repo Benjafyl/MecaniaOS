@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { getCurrentSession } from "@/modules/auth/auth.service";
 import { getDashboardSummary } from "@/modules/dashboard/dashboard.service";
 
 const stats = [
@@ -14,7 +15,11 @@ const stats = [
 ] as const;
 
 export default async function DashboardPage() {
-  const summary = await getDashboardSummary();
+  const session = await getCurrentSession();
+  const summary = await getDashboardSummary({
+    actorId: session?.user.id,
+    actorRole: session?.user.role,
+  });
 
   return (
     <div className="space-y-6">

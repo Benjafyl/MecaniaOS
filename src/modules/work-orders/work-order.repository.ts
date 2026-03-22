@@ -1,10 +1,15 @@
-import { Prisma, WorkOrderStatus } from "@prisma/client";
+import { Prisma, UserRole, WorkOrderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
 export const workOrderRepository = {
-  list(filters?: { search?: string; status?: WorkOrderStatus }) {
+  list(filters?: { search?: string; status?: WorkOrderStatus; actorId?: string; actorRole?: UserRole }) {
     const where: Prisma.WorkOrderWhereInput = {
+      ...(filters?.actorRole === UserRole.MECHANIC && filters.actorId
+        ? {
+            assignedTechnicianId: filters.actorId,
+          }
+        : {}),
       ...(filters?.status ? { status: filters.status } : {}),
       ...(filters?.search
         ? {
@@ -64,6 +69,15 @@ export const workOrderRepository = {
             active: true,
           },
         },
+        assignedTechnician: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            active: true,
+          },
+        },
       },
       orderBy: {
         intakeDate: "desc",
@@ -93,6 +107,31 @@ export const workOrderRepository = {
             email: true,
             role: true,
             active: true,
+          },
+        },
+        assignedTechnician: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            active: true,
+          },
+        },
+        evidences: {
+          include: {
+            uploadedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                active: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
           },
         },
         statusLogs: {
@@ -127,6 +166,15 @@ export const workOrderRepository = {
       },
       orderBy: {
         orderNumber: "desc",
+      },
+    });
+  },
+
+  findByIdForAssignment(id: string) {
+    return prisma.workOrder.findUnique({
+      where: { id },
+      select: {
+        id: true,
       },
     });
   },

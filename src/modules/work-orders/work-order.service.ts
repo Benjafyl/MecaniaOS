@@ -1,4 +1,4 @@
-import { WorkOrderStatus } from "@prisma/client";
+import { UserRole, WorkOrderStatus } from "@prisma/client";
 
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -7,9 +7,12 @@ import { isClosedStatus } from "@/modules/work-orders/work-order.constants";
 import { workOrderRepository } from "@/modules/work-orders/work-order.repository";
 import {
   createWorkOrderSchema,
+  updateWorkOrderAssignmentSchema,
   updateWorkOrderSchema,
   updateWorkOrderStatusSchema,
 } from "@/modules/work-orders/work-order.schemas";
+import { saveWorkOrderEvidenceFile } from "@/modules/work-orders/work-order.storage";
+import { listMechanics } from "@/modules/users/user.service";
 
 async function assertClientVehicleMatch(clientId: string, vehicleId: string) {
   const vehicle = await prisma.vehicle.findUnique({
@@ -38,10 +41,17 @@ async function getNextOrderNumber() {
   return `${prefix}${String(nextSequence).padStart(4, "0")}`;
 }
 
-export async function listWorkOrders(input?: { search?: string; status?: WorkOrderStatus }) {
+export async function listWorkOrders(input?: {
+  search?: string;
+  status?: WorkOrderStatus;
+  actorId?: string;
+  actorRole?: UserRole;
+}) {
   return workOrderRepository.list({
     search: input?.search?.trim(),
     status: input?.status,
+    actorId: input?.actorId,
+    actorRole: input?.actorRole,
   });
 }
 
@@ -74,6 +84,7 @@ export async function createWorkOrder(input: unknown, actorId: string) {
         notes: data.notes,
         createdById: actorId,
         updatedById: actorId,
+        assignedTechnicianId: data.assignedTechnicianId,
       },
     });
 
@@ -89,6 +100,53 @@ export async function createWorkOrder(input: unknown, actorId: string) {
 
     return workOrder;
   });
+}
+
+export async function updateWorkOrderAssignment(id: string, input: unknown, actorId: string) {
+  const data = updateWorkOrderAssignmentSchema.parse(input);
+  const existing = await workOrderRepository.findByIdForAssignment(id);
+
+  if (!existing) {
+    throw new NotFoundError("Orden de trabajo no encontrada");
+  }
+
+  return prisma.workOrder.update({
+    where: { id },
+    data: {
+      assignedTechnicianId: data.assignedTechnicianId ?? null,
+      updatedById: actorId,
+    },
+  });
+}
+
+export async function addWorkOrderEvidence(workOrderId: string, input: { file: File; note?: string }, actorId: string) {
+  const workOrder = await workOrderRepository.findByIdForAssignment(workOrderId);
+
+  if (!workOrder) {
+    throw new NotFoundError("Orden de trabajo no encontrada");
+  }
+
+  const savedFile = await saveWorkOrderEvidenceFile({
+    workOrderId,
+    file: input.file,
+  });
+
+  return prisma.workOrderEvidence.create({
+    data: {
+      workOrderId,
+      uploadedById: actorId,
+      fileUrl: savedFile.fileUrl,
+      storageKey: savedFile.storageKey,
+      fileName: savedFile.fileName,
+      mimeType: savedFile.mimeType,
+      sizeBytes: savedFile.sizeBytes,
+      note: input.note?.trim() ? input.note.trim() : null,
+    },
+  });
+}
+
+export async function getAssignableMechanics() {
+  return listMechanics();
 }
 
 export async function updateWorkOrder(id: string, input: unknown, actorId: string) {

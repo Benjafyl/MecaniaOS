@@ -6,7 +6,12 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { getWorkOrderById } from "@/modules/work-orders/work-order.service";
+import {
+  getAssignableMechanics,
+  getWorkOrderById,
+} from "@/modules/work-orders/work-order.service";
+import { AssignmentForm } from "@/app/(protected)/work-orders/assignment-form";
+import { EvidenceUploadForm } from "@/app/(protected)/work-orders/evidence-upload-form";
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
 
@@ -25,6 +30,7 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
     throw error;
   });
+  const mechanics = await getAssignableMechanics();
 
   return (
     <div className="space-y-6">
@@ -79,9 +85,31 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
                 {workOrder.createdBy.name}
               </p>
               <p>
+                <span className="font-semibold text-[color:var(--foreground)]">Tecnico asignado:</span>{" "}
+                {workOrder.assignedTechnician?.name ?? "Sin asignar"}
+              </p>
+              <p>
                 <span className="font-semibold text-[color:var(--foreground)]">Observaciones:</span>{" "}
                 {workOrder.notes ?? "Sin observaciones"}
               </p>
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <h2 className="font-heading text-2xl font-semibold">Asignacion</h2>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">
+              Define el mecanico responsable para su vista de trabajo diaria.
+            </p>
+
+            <div className="mt-5">
+              <AssignmentForm
+                currentAssignedTechnicianId={workOrder.assignedTechnicianId}
+                mechanics={mechanics.map((mechanic) => ({
+                  id: mechanic.id,
+                  name: mechanic.name,
+                }))}
+                orderId={workOrder.id}
+              />
             </div>
           </Card>
 
@@ -98,36 +126,80 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
         </div>
 
         <Card className="rounded-2xl">
-          <h2 className="font-heading text-2xl font-semibold">Bitacora de estados</h2>
-          <p className="mt-2 text-sm text-[color:var(--muted)]">
-            Historial cronologico de la reparacion.
-          </p>
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-heading text-2xl font-semibold">Evidencias de la orden</h2>
+              <p className="mt-2 text-sm text-[color:var(--muted)]">
+                Adjunta imagenes del proceso para mantener historial visual de la reparacion.
+              </p>
+            </div>
 
-          <div className="mt-6 space-y-4">
-            {workOrder.statusLogs.map((log) => (
-              <div
-                className="rounded-lg border border-[color:var(--border)] bg-white/70 p-4"
-                key={log.id}
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusBadge status={log.nextStatus} />
-                  <p className="text-sm font-semibold text-[color:var(--foreground)]">
-                    {WORK_ORDER_STATUS_LABELS[log.nextStatus]}
+            <EvidenceUploadForm orderId={workOrder.id} />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {workOrder.evidences.map((evidence) => (
+                <div
+                  className="rounded-xl border border-[color:var(--border)] bg-white/70 p-3"
+                  key={evidence.id}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={evidence.fileName}
+                    className="h-44 w-full rounded-xl object-cover"
+                    src={evidence.fileUrl}
+                  />
+                  <p className="mt-3 text-sm font-semibold text-[color:var(--foreground)]">
+                    {evidence.fileName}
+                  </p>
+                  {evidence.note ? (
+                    <p className="mt-1 text-xs text-[color:var(--muted-strong)]">{evidence.note}</p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">
+                    {evidence.uploadedBy.name} / {formatDateTime(evidence.createdAt)}
                   </p>
                 </div>
-                {log.previousStatus ? (
-                  <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                    Desde {WORK_ORDER_STATUS_LABELS[log.previousStatus]}
+              ))}
+            </div>
+
+            {workOrder.evidences.length === 0 ? (
+              <p className="text-sm text-[color:var(--muted)]">
+                Aun no hay evidencias adjuntas a esta orden.
+              </p>
+            ) : null}
+
+            <div>
+              <h2 className="font-heading text-2xl font-semibold">Bitacora de estados</h2>
+              <p className="mt-2 text-sm text-[color:var(--muted)]">
+                Historial cronologico de la reparacion.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {workOrder.statusLogs.map((log) => (
+                <div
+                  className="rounded-lg border border-[color:var(--border)] bg-white/70 p-4"
+                  key={log.id}
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <StatusBadge status={log.nextStatus} />
+                    <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                      {WORK_ORDER_STATUS_LABELS[log.nextStatus]}
+                    </p>
+                  </div>
+                  {log.previousStatus ? (
+                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                      Desde {WORK_ORDER_STATUS_LABELS[log.previousStatus]}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
+                    {log.note ?? "Sin nota"}
                   </p>
-                ) : null}
-                <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
-                  {log.note ?? "Sin nota"}
-                </p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">
-                  {log.changedBy.name} / {formatDateTime(log.changedAt)}
-                </p>
-              </div>
-            ))}
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">
+                    {log.changedBy.name} / {formatDateTime(log.changedAt)}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       </div>
