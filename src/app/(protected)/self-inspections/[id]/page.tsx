@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 
+import { PublicLinkPanel } from "@/app/(protected)/self-inspections/public-link-panel";
 import { ReviewForm } from "@/app/(protected)/self-inspections/review-form";
 import { SelfInspectionStatusForm } from "@/app/(protected)/self-inspections/status-form";
 import { SelfInspectionRiskBadge } from "@/components/self-inspections/self-inspection-risk-badge";
 import { SelfInspectionStatusBadge } from "@/components/self-inspections/self-inspection-status-badge";
 import { Card } from "@/components/ui/card";
 import { normalizeError } from "@/lib/errors";
+import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/utils";
 import {
   SELF_INSPECTION_DEPARTMENT_LABELS,
@@ -41,6 +43,7 @@ export default async function SelfInspectionDetailPage({
     throw error;
   });
   const latestReview = inspection.reviews[0];
+  const publicUrl = token ? `${env.APP_URL}/self-inspections/start/${token}` : null;
 
   return (
     <div className="space-y-6">
@@ -67,16 +70,7 @@ export default async function SelfInspectionDetailPage({
             </p>
           </div>
 
-          {token ? (
-            <div className="rounded-[24px] border border-[rgba(200,92,42,0.18)] bg-[rgba(200,92,42,0.08)] p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-                Enlace seguro recien generado
-              </p>
-              <p className="mt-2 break-all text-sm font-semibold text-[color:var(--foreground)]">
-                /self-inspections/start/{token}
-              </p>
-            </div>
-          ) : null}
+          {publicUrl ? <PublicLinkPanel publicUrl={publicUrl} /> : null}
         </div>
       </Card>
 
