@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
@@ -32,6 +33,10 @@ export async function createSelfInspectionInviteAction(
     revalidatePath("/self-inspections");
     redirect(`/self-inspections/${invite.inspectionId}?token=${invite.token}`);
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
@@ -60,6 +65,10 @@ export async function reviewSelfInspectionAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
@@ -86,6 +95,10 @@ export async function updateSelfInspectionStatusAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
