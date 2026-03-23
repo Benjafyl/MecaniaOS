@@ -36,6 +36,21 @@ type WizardProps = {
   initialData: PublicSelfInspectionWizardData;
 };
 
+type ApiValidationDetail = {
+  path: string[];
+  message: string;
+};
+
+class RequestError extends Error {
+  constructor(
+    message: string,
+    public readonly details: ApiValidationDetail[] = [],
+  ) {
+    super(message);
+    this.name = "RequestError";
+  }
+}
+
 const operationalBooleanQuestions = [
   ["unusualNoises", "Presenta ruidos inusuales"],
   ["vibrations", "Presenta vibraciones"],
@@ -124,12 +139,61 @@ function getInitialCurrentStep(data: PublicSelfInspectionWizardData) {
   return Math.min(data.inspection.lastCompletedStep + 1, 9);
 }
 
+const validationPathLabels: Record<string, string> = {
+  operational: "Operacion",
+  engine: "Motor",
+  brakes: "Frenos",
+  steeringSuspension: "Direccion y suspension",
+  automaticTransmission: "Transmision automatica",
+  manualTransmission: "Transmision manual",
+  tires: "Neumaticos y ruedas",
+  electrical: "Sistema electrico",
+  interior: "Interior / confort",
+  exterior: "Exterior / carroceria",
+  dashboardWarningDetails: "detalle de testigos encendidos",
+  fluidLeakDetails: "detalle de fuga o fluido visible",
+  startBehavior: "comportamiento al encender",
+  pedalFeel: "sensacion del pedal de freno",
+  clutchPedalPosition: "posicion del pedal de embrague",
+  wearPattern: "tipo de desgaste",
+  multimediaWorking: "estado de multimedia",
+  damageAge: "antiguedad del dano",
+};
+
+function formatValidationDetail(detail: ApiValidationDetail) {
+  if (detail.path.length === 0) {
+    return detail.message;
+  }
+
+  const formattedPath = detail.path
+    .map((segment) => validationPathLabels[segment] ?? segment)
+    .join(" / ");
+
+  return `${formattedPath}: ${detail.message}`;
+}
+
+function getErrorMessages(error: unknown) {
+  if (error instanceof RequestError) {
+    if (error.details.length > 0) {
+      return error.details.map(formatValidationDetail);
+    }
+
+    return [error.message];
+  }
+
+  if (error instanceof Error) {
+    return [error.message];
+  }
+
+  return ["No fue posible completar la solicitud"];
+}
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const body = await response.json();
 
   if (!response.ok) {
-    throw new Error(body.error ?? "No fue posible completar la solicitud");
+    throw new RequestError(body.error ?? "No fue posible completar la solicitud", body.details ?? []);
   }
 
   return body.data as T;
@@ -140,7 +204,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
   const [currentStep, setCurrentStep] = useState(getInitialCurrentStep(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingPhotoType, setUploadingPhotoType] = useState<string | null>(null);
-  const [error, setError] = useState<string>("");
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [acceptance, setAcceptance] = useState(false);
 
   const isReadOnly = useMemo(
@@ -156,7 +220,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
     data.form.vehicle.transmission === "DUAL_CLUTCH";
 
   async function saveStep(endpoint: string, payload: unknown, nextStep?: number) {
-    setError("");
+    setErrorMessages([]);
     setIsSubmitting(true);
 
     try {
@@ -174,14 +238,14 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         setCurrentStep(nextStep);
       }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "No fue posible guardar");
+      setErrorMessages(getErrorMessages(saveError));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handlePhotoUpload(file: File, photoType: string) {
-    setError("");
+    setErrorMessages([]);
     setUploadingPhotoType(photoType);
 
     try {
@@ -201,14 +265,14 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
 
       setData(nextData);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "No fue posible subir la foto");
+      setErrorMessages(getErrorMessages(uploadError));
     } finally {
       setUploadingPhotoType(null);
     }
   }
 
   async function handlePhotoDelete(photoId: string) {
-    setError("");
+    setErrorMessages([]);
     setUploadingPhotoType(photoId);
 
     try {
@@ -221,14 +285,14 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
 
       setData(nextData);
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "No fue posible quitar la foto");
+      setErrorMessages(getErrorMessages(deleteError));
     } finally {
       setUploadingPhotoType(null);
     }
   }
 
   async function handleSubmit() {
-    setError("");
+    setErrorMessages([]);
     setIsSubmitting(true);
 
     try {
@@ -248,7 +312,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
       setData(nextData);
       setCurrentStep(10);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "No fue posible enviar");
+      setErrorMessages(getErrorMessages(submitError));
     } finally {
       setIsSubmitting(false);
     }
@@ -378,9 +442,16 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         </div>
       </Card>
 
-      {error ? (
+      {errorMessages.length > 0 ? (
         <Card className="rounded-[28px] border-[rgba(200,92,42,0.18)] bg-[rgba(200,92,42,0.08)]">
-          <p className="text-sm font-semibold text-[color:var(--accent-strong)]">{error}</p>
+          <p className="text-sm font-semibold text-[color:var(--accent-strong)]">
+            Revisa estos campos antes de continuar:
+          </p>
+          <ul className="mt-3 space-y-2 text-sm text-[color:var(--accent-strong)]">
+            {errorMessages.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
         </Card>
       ) : null}
 
