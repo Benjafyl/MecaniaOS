@@ -11,6 +11,7 @@ const links = [
   { href: "/vehicles", label: "Vehiculos" },
   { href: "/self-inspections", label: "Autoinspecciones" },
   { href: "/work-orders", label: "Ordenes" },
+  { href: "/inventory", label: "Inventario" },
 ];
 
 export function SidebarNav() {
