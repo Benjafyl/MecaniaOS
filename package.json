@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "jira:issue:get": "tsx tools/jira/cli.ts issue:get",
+    "jira:issue:list-subtasks": "tsx tools/jira/list-subtasks.ts",
     "jira:issue:comment": "tsx tools/jira/cli.ts issue:comment",
     "jira:issue:update-description": "tsx tools/jira/cli.ts issue:update-description",
     "jira:issue:transition": "tsx tools/jira/cli.ts issue:transition",
