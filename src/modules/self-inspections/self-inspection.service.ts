@@ -2,6 +2,7 @@ import {
   Prisma,
   SelfInspectionAnswerType,
   SelfInspectionNoteType,
+  SelfInspectionReason,
   SelfInspectionRiskLevel,
   SelfInspectionStatus,
   VehicleFuelType,
@@ -947,12 +948,21 @@ async function syncTransmissionBranchAnswers(
 }
 
 function buildReasonAnswerRecords(data: ReturnType<typeof selfInspectionReasonStepSchema.parse>) {
-  return [
-    buildAnswerRecord("reason_problem_since", data.problemSince),
-    buildAnswerRecord("reason_issue_frequency", data.issueFrequency),
-    buildAnswerRecord("reason_can_drive", data.canDrive),
-    buildAnswerRecord("reason_worsened_recently", data.worsenedRecently),
-  ];
+  const answers = [buildAnswerRecord("reason_can_drive", data.canDrive)];
+
+  if (data.problemSince) {
+    answers.push(buildAnswerRecord("reason_problem_since", data.problemSince));
+  }
+
+  if (data.issueFrequency) {
+    answers.push(buildAnswerRecord("reason_issue_frequency", data.issueFrequency));
+  }
+
+  if (typeof data.worsenedRecently === "boolean") {
+    answers.push(buildAnswerRecord("reason_worsened_recently", data.worsenedRecently));
+  }
+
+  return answers;
 }
 
 function buildGeneralAnswerRecords(data: ReturnType<typeof selfInspectionGeneralStepSchema.parse>) {
@@ -1111,9 +1121,30 @@ function buildHistoryAnswerRecords(data: ReturnType<typeof selfInspectionHistory
 
 function getRequiredAnswerKeysForSubmission(
   transmission: VehicleTransmissionType,
+  inspectionReason: SelfInspectionReason,
   answersMap: AnswerMap,
 ) {
   const required: string[] = [...SELF_INSPECTION_REQUIRED_ANSWER_KEYS];
+
+  const requiresProblemTimeline =
+    inspectionReason !== SelfInspectionReason.PREVENTIVE_MAINTENANCE &&
+    inspectionReason !== SelfInspectionReason.PRE_PURCHASE;
+
+  if (!requiresProblemTimeline) {
+    const optionalReasonKeys = [
+      "reason_problem_since",
+      "reason_issue_frequency",
+      "reason_worsened_recently",
+    ];
+
+    for (const key of optionalReasonKeys) {
+      const index = required.indexOf(key);
+
+      if (index >= 0) {
+        required.splice(index, 1);
+      }
+    }
+  }
 
   if (isAutomaticTransmission(transmission)) {
     required.push(...SELF_INSPECTION_AUTOMATIC_ONLY_KEYS);
@@ -1381,6 +1412,7 @@ export async function submitPublicSelfInspection(token: string, input: unknown) 
   const answersMap = mapAnswersToRecord(inspection.answers);
   const requiredAnswerKeys = getRequiredAnswerKeysForSubmission(
     inspection.vehicleSnapshot.transmission,
+    inspection.inspectionReason!,
     answersMap,
   );
   const missingAnswers = requiredAnswerKeys.filter((questionKey) => {

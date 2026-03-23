@@ -116,11 +116,11 @@ export const selfInspectionReasonStepSchema = z
   .object({
     inspectionReason: z.nativeEnum(SelfInspectionReason),
     inspectionReasonOther: optionalText(120),
-    mainComplaint: requiredText(10, 600),
-    problemSince: requiredText(2, 120),
-    issueFrequency: z.enum(["CONSTANT", "INTERMITTENT"]),
+    mainComplaint: requiredText(5, 600),
+    problemSince: optionalText(120),
+    issueFrequency: z.enum(["CONSTANT", "INTERMITTENT"]).optional(),
     canDrive: requiredBoolean("Debes indicar si el vehiculo puede circular"),
-    worsenedRecently: requiredBoolean("Debes indicar si el problema empeoro"),
+    worsenedRecently: optionalBoolean(),
   })
   .superRefine((value, ctx) => {
     if (value.inspectionReason === SelfInspectionReason.OTHER && !value.inspectionReasonOther) {
@@ -128,6 +128,34 @@ export const selfInspectionReasonStepSchema = z
         code: "custom",
         message: "Debes especificar el motivo cuando seleccionas 'Otro'",
         path: ["inspectionReasonOther"],
+      });
+    }
+
+    const requiresProblemTimeline =
+      value.inspectionReason !== SelfInspectionReason.PREVENTIVE_MAINTENANCE &&
+      value.inspectionReason !== SelfInspectionReason.PRE_PURCHASE;
+
+    if (requiresProblemTimeline && !value.problemSince) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Indica desde cuando ocurre el problema",
+        path: ["problemSince"],
+      });
+    }
+
+    if (requiresProblemTimeline && !value.issueFrequency) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Selecciona la frecuencia del problema",
+        path: ["issueFrequency"],
+      });
+    }
+
+    if (requiresProblemTimeline && value.worsenedRecently === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Debes indicar si el problema empeoro recientemente",
+        path: ["worsenedRecently"],
       });
     }
   });

@@ -218,6 +218,17 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
     data.form.vehicle.transmission === "AUTOMATIC" ||
     data.form.vehicle.transmission === "CVT" ||
     data.form.vehicle.transmission === "DUAL_CLUTCH";
+  const requiresProblemTimeline =
+    data.form.reason.inspectionReason !== "PREVENTIVE_MAINTENANCE" &&
+    data.form.reason.inspectionReason !== "PRE_PURCHASE";
+
+  function buildGeneralPayload() {
+    return {
+      ...data.form.general,
+      automaticTransmission: isAutomatic ? data.form.general.automaticTransmission : undefined,
+      manualTransmission: isAutomatic ? undefined : data.form.general.manualTransmission,
+    };
+  }
 
   async function saveStep(endpoint: string, payload: unknown, nextStep?: number) {
     setErrorMessages([]);
@@ -650,7 +661,13 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
               </QuestionField>
             ) : null}
 
-            <QuestionField label="Describe el problema principal">
+            <QuestionField
+              label={
+                requiresProblemTimeline
+                  ? "Describe el problema principal"
+                  : "Describe que quieres revisar o solicitar"
+              }
+            >
               <Textarea
                 disabled={isReadOnly}
                 onChange={(event) => updateReasonField("mainComplaint", event.target.value)}
@@ -659,24 +676,28 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
             </QuestionField>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <QuestionField label="Desde cuando ocurre el problema">
-                <Input
-                  disabled={isReadOnly}
-                  onChange={(event) => updateReasonField("problemSince", event.target.value)}
-                  value={String(data.form.reason.problemSince ?? "")}
-                />
-              </QuestionField>
-              <QuestionField label="Frecuencia">
-                <ChoiceSegmentField
-                  disabled={isReadOnly}
-                  onChange={(value) => updateReasonField("issueFrequency", value)}
-                  options={ISSUE_FREQUENCY_OPTIONS.map((option) => ({
-                    label: option.label,
-                    value: option.value,
-                  }))}
-                  value={String(data.form.reason.issueFrequency ?? "")}
-                />
-              </QuestionField>
+              {requiresProblemTimeline ? (
+                <QuestionField label="Desde cuando ocurre el problema">
+                  <Input
+                    disabled={isReadOnly}
+                    onChange={(event) => updateReasonField("problemSince", event.target.value)}
+                    value={String(data.form.reason.problemSince ?? "")}
+                  />
+                </QuestionField>
+              ) : null}
+              {requiresProblemTimeline ? (
+                <QuestionField label="Frecuencia">
+                  <ChoiceSegmentField
+                    disabled={isReadOnly}
+                    onChange={(value) => updateReasonField("issueFrequency", value)}
+                    options={ISSUE_FREQUENCY_OPTIONS.map((option) => ({
+                      label: option.label,
+                      value: option.value,
+                    }))}
+                    value={String(data.form.reason.issueFrequency ?? "")}
+                  />
+                </QuestionField>
+              ) : null}
               <QuestionField label="El vehiculo puede circular">
                 <BooleanSegmentField
                   disabled={isReadOnly}
@@ -684,13 +705,15 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
                   value={data.form.reason.canDrive as boolean | undefined}
                 />
               </QuestionField>
-              <QuestionField label="El problema empeoro recientemente">
-                <BooleanSegmentField
-                  disabled={isReadOnly}
-                  onChange={(value) => updateReasonField("worsenedRecently", value)}
-                  value={data.form.reason.worsenedRecently as boolean | undefined}
-                />
-              </QuestionField>
+              {requiresProblemTimeline ? (
+                <QuestionField label="El problema empeoro recientemente">
+                  <BooleanSegmentField
+                    disabled={isReadOnly}
+                    onChange={(value) => updateReasonField("worsenedRecently", value)}
+                    value={data.form.reason.worsenedRecently as boolean | undefined}
+                  />
+                </QuestionField>
+              ) : null}
             </div>
           </div>
 
@@ -913,7 +936,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
             <Button
               disabled={isReadOnly || isSubmitting}
               onClick={() =>
-                saveStep(`/api/self-inspections/public/${token}/general`, data.form.general, 5)
+                saveStep(`/api/self-inspections/public/${token}/general`, buildGeneralPayload(), 5)
               }
               type="button"
             >
