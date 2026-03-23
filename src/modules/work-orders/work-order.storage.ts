@@ -1,8 +1,9 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
+import { deleteStorageObject, uploadPublicStorageObject } from "@/lib/supabase-storage";
 
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -12,10 +13,6 @@ const mimeExtensionMap: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
 };
-
-function getUploadsRoot() {
-  return path.join(process.cwd(), "public", "uploads", "work-orders");
-}
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -51,31 +48,28 @@ export async function saveWorkOrderEvidenceFile(input: {
 }) {
   validateWorkOrderEvidenceFile(input.file);
 
-  const orderDir = path.join(getUploadsRoot(), input.workOrderId);
-  await mkdir(orderDir, { recursive: true });
+  if (!env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS) {
+    throw new AppError("Falta configurar el bucket de work-orders en el entorno.", 500);
+  }
 
   const extension = resolveFileExtension(input.file.name, input.file.type);
   const safeOriginalName = sanitizeFileName(
     path.basename(input.file.name, path.extname(input.file.name)) || "evidence",
   );
   const finalFileName = `evidence-${safeOriginalName}-${randomUUID()}${extension}`;
-  const storageKey = path.posix.join("uploads", "work-orders", input.workOrderId, finalFileName);
-  const absoluteFilePath = path.join(getUploadsRoot(), input.workOrderId, finalFileName);
-  const buffer = Buffer.from(await input.file.arrayBuffer());
+  const storageKey = path.posix.join(input.workOrderId, finalFileName);
 
-  await writeFile(absoluteFilePath, buffer);
-
-  return {
+  return uploadPublicStorageObject({
+    bucket: env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS,
     storageKey,
-    fileUrl: `/${storageKey}`,
-    fileName: input.file.name,
-    mimeType: input.file.type,
-    sizeBytes: input.file.size,
-  };
+    file: input.file,
+  });
 }
 
 export async function deleteWorkOrderEvidenceFile(storageKey: string) {
-  const absoluteFilePath = path.join(process.cwd(), "public", storageKey);
+  if (!env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS) {
+    return;
+  }
 
-  await unlink(absoluteFilePath).catch(() => undefined);
+  await deleteStorageObject(env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS, storageKey);
 }

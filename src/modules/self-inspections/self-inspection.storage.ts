@@ -1,8 +1,9 @@
-import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
+import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
+import { deleteStorageObject, uploadPublicStorageObject } from "@/lib/supabase-storage";
 
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -20,10 +21,6 @@ const mimeExtensionMap: Record<string, string> = {
   "image/heic": ".heic",
   "image/heif": ".heif",
 };
-
-function getUploadsRoot() {
-  return path.join(process.cwd(), "public", "uploads", "self-inspections");
-}
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -60,31 +57,28 @@ export async function saveInspectionPhotoFile(input: {
 }) {
   validateInspectionPhotoFile(input.file);
 
-  const inspectionDir = path.join(getUploadsRoot(), input.inspectionId);
-  await mkdir(inspectionDir, { recursive: true });
+  if (!env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS) {
+    throw new AppError("Falta configurar el bucket de self-inspections en el entorno.", 500);
+  }
 
   const extension = resolveFileExtension(input.file.name, input.file.type);
   const safeOriginalName = sanitizeFileName(
     path.basename(input.file.name, path.extname(input.file.name)) || input.photoType.toLowerCase(),
   );
   const finalFileName = `${input.photoType.toLowerCase()}-${safeOriginalName}-${randomUUID()}${extension}`;
-  const storageKey = path.posix.join("uploads", "self-inspections", input.inspectionId, finalFileName);
-  const absoluteFilePath = path.join(getUploadsRoot(), input.inspectionId, finalFileName);
-  const buffer = Buffer.from(await input.file.arrayBuffer());
+  const storageKey = path.posix.join(input.inspectionId, finalFileName);
 
-  await writeFile(absoluteFilePath, buffer);
-
-  return {
+  return uploadPublicStorageObject({
+    bucket: env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS,
     storageKey,
-    fileUrl: `/${storageKey}`,
-    fileName: input.file.name,
-    mimeType: input.file.type,
-    sizeBytes: input.file.size,
-  };
+    file: input.file,
+  });
 }
 
 export async function deleteInspectionPhotoFile(storageKey: string) {
-  const absoluteFilePath = path.join(process.cwd(), "public", storageKey);
+  if (!env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS) {
+    return;
+  }
 
-  await unlink(absoluteFilePath).catch(() => undefined);
+  await deleteStorageObject(env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS, storageKey);
 }

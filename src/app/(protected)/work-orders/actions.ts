@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 
 import { getErrorMessage } from "@/lib/errors";
 import type { ActionState } from "@/lib/form-state";
@@ -34,6 +35,10 @@ export async function createWorkOrderAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
@@ -60,6 +65,10 @@ export async function updateWorkOrderAssignmentAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
@@ -88,6 +97,10 @@ export async function updateWorkOrderStatusAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
@@ -121,6 +134,10 @@ export async function addWorkOrderEvidenceAction(
       session.user.id,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     return {
       error: getErrorMessage(error),
     };
