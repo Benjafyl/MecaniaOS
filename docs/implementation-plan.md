@@ -1,62 +1,103 @@
-# Plan de implementacion MVP
+# Plan de implementacion
 
-## Arquitectura objetivo
+## Objetivo
 
-- Monolito modular con `Next.js 16`, `App Router`, `TypeScript`, `Prisma` y `PostgreSQL`.
-- UI y API en el mismo proyecto para acelerar el MVP sin sacrificar separacion de responsabilidades.
-- Logica de negocio encapsulada por modulo dentro de `src/modules`.
-- Persistencia centralizada en Prisma.
-- Autenticacion basada en sesiones con cookie `httpOnly` y control de roles.
+Llevar MecaniaOS desde la base operativa actual hacia el producto definido en el PRD: una plataforma web responsive para la gestion de taller con trazabilidad operativa, portal cliente, soporte para aseguradoras y autoinspeccion remota.
 
-## Fases
+## Estado base ya implementado
 
-### Fase 0. Fundacion tecnica
+- autenticacion con sesiones seguras.
+- usuarios internos `ADMIN` y `MECHANIC`.
+- dashboard operativo basico.
+- CRUD de clientes.
+- CRUD de vehiculos.
+- busqueda por VIN y patente.
+- ordenes de trabajo con responsable actual.
+- historial de cambios de estado en OT.
+- evidencia fotografica en OT.
+- historial tecnico por vehiculo y VIN.
+- autoinspeccion remota por enlace seguro con revision interna.
 
-- Inicializacion de proyecto y convenciones.
-- Configuracion de Tailwind, Prisma, variables de entorno y utilidades compartidas.
-- Definicion del esquema base de datos.
-- Seeds iniciales.
+## Brechas principales respecto al PRD
 
-### Fase 1. Base del sistema
+- falta el modulo de presupuestos.
+- falta la aprobacion formal del presupuesto como hito de negocio.
+- no existen tareas dentro de la OT ni progreso calculado automaticamente.
+- no existe portal cliente autenticado.
+- no existe portal aseguradora ni organizaciones externas.
+- no existe sistema de notificaciones por correo.
+- los roles actuales todavia no representan supervisor, pintura/desabolladura, cliente ni aseguradora.
+- el dashboard aun no muestra los KPIs objetivo.
 
-- Autenticacion con sesiones seguras.
-- Usuarios y roles `ADMIN`, `MECHANIC`, `CUSTOMER`.
-- Layout protegido y middleware.
-- Dashboard interno inicial.
+## Fases propuestas
 
-### Fase 2. Maestro operacional
+### Fase 1. Cierre del nucleo operativo
 
-- CRUD base de clientes.
-- CRUD base de vehiculos.
-- Validaciones de VIN y patente.
-- Busqueda por VIN y patente.
+- introducir `Quote` y `QuoteItem`.
+- permitir crear presupuesto desde cliente + vehiculo o desde autoinspeccion.
+- registrar estados `borrador`, `enviado`, `aprobado`, `rechazado`.
+- permitir convertir un presupuesto aprobado en OT.
+- restringir el acceso del cliente al portal solo despues de aprobacion.
 
-### Fase 3. Nucleo operativo
+### Fase 2. Ejecucion de trabajo y progreso
 
-- Creacion y listado de ordenes de trabajo.
-- Estados de reparacion.
-- Bitacora de cambios de estado para trazabilidad.
-- Historial tecnico por vehiculo y VIN.
+- modelar `WorkOrderTask`.
+- calcular avance de forma automatica segun tareas completadas.
+- exponer checklist operativo dentro de la OT.
+- detectar atraso comparando fecha prometida vs estado de cierre.
+- diferenciar evidencia interna y evidencia visible externamente.
 
-### Fase 4. Complementos del MVP
+### Fase 3. Roles y experiencia externa
 
-- Inventario simple de repuestos.
-- Cotizaciones asociadas a la orden.
-- Evidencias fotograficas.
-- Portal cliente.
+- expandir roles a `SUPERVISOR`, `MECHANIC`, `BODY_PAINT`, `CUSTOMER`, `INSURANCE_ADJUSTER`.
+- crear portal cliente autenticado.
+- mostrar al cliente estado, progreso, evidencia visible e historial.
+- modelar `InsuranceCompany` e `InsuranceAdjuster`.
+- crear portal aseguradora para seguimiento de casos derivados.
 
-### Fase 5. Evolutivos
+### Fase 4. Comunicaciones y supervision
 
-- Proveedores.
-- Aseguradoras.
-- Pagos.
-- Analitica y alertas.
+- enviar correos por cambios relevantes de estado.
+- ampliar dashboard con KPIs del PRD.
+- agregar filtros por estado, responsable y atraso.
+- resaltar ordenes atrasadas y carga por tecnico.
 
-## Sprint 1 implementado en esta base
+### Fase 5. Cierre del MVP demo
 
-- Autenticacion.
-- Clientes.
-- Vehiculos.
-- Ordenes de trabajo.
-- Estados de reparacion.
-- Historial tecnico.
+- revisar consistencia de datos demo.
+- preparar recorrido demostrable end-to-end.
+- asegurar despliegue limpio en `Vercel`.
+- documentar credenciales, flujos y limites del MVP.
+
+## Prioridad realista para MVP
+
+### Obligatorio
+
+- presupuestos.
+- aprobacion de presupuestos.
+- OT derivada de presupuesto aprobado.
+- tareas y progreso calculado.
+- evidencia con visibilidad.
+- portal cliente basico.
+- dashboard alineado al flujo.
+
+### Deseable si alcanza el tiempo
+
+- portal aseguradora.
+- correos automaticos.
+- alertas visuales de atraso.
+
+### Postergable
+
+- reporterias complejas.
+- analitica avanzada.
+- integraciones externas.
+- automatizaciones sofisticadas.
+
+## Criterio de alineacion
+
+La documentacion y el roadmap deben seguir esta regla:
+
+- no presentar como implementado algo que todavia esta solo en el PRD.
+- no seguir describiendo MecaniaOS como un sistema de mantenciones generico.
+- priorizar el flujo completo del taller por sobre modulos accesorios.

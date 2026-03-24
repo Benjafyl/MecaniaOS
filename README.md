@@ -1,25 +1,58 @@
 # MecaniaOS
 
-MVP de un sistema de seguimiento de mantenciones mecanicas para talleres.
+Sistema web responsive para la gestion operativa de un taller mecanico pequeno o mediano.
+
+## Vision del producto
+
+MecaniaOS busca centralizar el flujo completo del taller desde el ingreso del vehiculo hasta su entrega. El producto apunta a ordenar la operacion interna, dar trazabilidad sobre cada intervencion y ofrecer visibilidad tanto al cliente como a aseguradoras en los casos derivados.
+
+Esta etapa del proyecto corresponde a una demo funcional universitaria desplegable en `Vercel`, pensada inicialmente para un solo taller, con arquitectura realista y datos demo consistentes.
+
+## Estado actual del proyecto
+
+La base actual ya cubre parte importante del nucleo operativo:
+
+- autenticacion por sesiones y control de acceso interno.
+- gestion de usuarios internos.
+- registro y administracion de clientes.
+- registro y administracion de vehiculos.
+- ordenes de trabajo con responsable actual y cambios de estado trazables.
+- carga de evidencia fotografica en ordenes de trabajo.
+- historial tecnico por vehiculo y VIN.
+- dashboard operativo basico.
+- autoinspeccion remota por enlace seguro.
+
+Todavia no estan implementados los modulos clave que el PRD define para el MVP funcional completo:
+
+- presupuestos y aprobacion de presupuestos.
+- tareas dentro de la OT y progreso calculado automaticamente.
+- portal cliente.
+- portal aseguradora y modelo organizacional para liquidadores.
+- notificaciones por correo.
+- KPIs operativos ampliados y alertas de atraso.
+- roles mas granulares para supervisor, pintura/desabolladura, cliente y aseguradora.
 
 ## Stack
 
 - Next.js 16
 - TypeScript
 - Prisma 6.18
-- PostgreSQL
+- PostgreSQL / Supabase
 - Tailwind CSS 4
 - Zod
-- Autenticacion por sesion con cookie `httpOnly`
+- autenticacion por sesion con cookie `httpOnly`
 
 ## Arquitectura
 
-Se usa un monolito modular: la UI y la API viven en el mismo proyecto, pero la logica de negocio queda separada por dominios dentro de `src/modules`.
+Se usa un monolito modular: la UI y la API viven en el mismo proyecto, pero la logica de negocio se separa por dominios dentro de `src/modules`.
 
-Documentacion base:
+Documentacion principal:
 
 - `docs/architecture.md`
 - `docs/implementation-plan.md`
+- `docs/prd-alignment.md`
+- `docs/self-inspection.md`
+- `docs/team-workflow.md`
 
 ## Estructura
 
@@ -31,6 +64,7 @@ Documentacion base:
 |   |-- app/
 |   |   |-- api/
 |   |   |-- login/
+|   |   |-- self-inspections/
 |   |   `-- (protected)/
 |   |-- components/
 |   |-- lib/
@@ -39,14 +73,16 @@ Documentacion base:
 `-- README.md
 ```
 
-## Modulos implementados en Sprint 1
+## Modulos implementados
 
-- Autenticacion
-- Clientes
-- Vehiculos
-- Ordenes de trabajo
-- Estados de reparacion
-- Historial tecnico
+- `auth`
+- `users`
+- `clients`
+- `vehicles`
+- `work-orders`
+- `service-history`
+- `dashboard`
+- `self-inspections`
 
 ## Variables de entorno
 
@@ -54,12 +90,12 @@ Crear `.env` o `.env.local` usando `.env.example` como base:
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5433/mecaniaos?schema=public"
+DIRECT_URL="postgresql://postgres:postgres@localhost:5433/mecaniaos?schema=public"
 SESSION_SECRET="replace-this-with-a-long-random-secret"
 APP_URL="http://localhost:3000"
 ```
 
-En este repo ya deje una `.env.local` para desarrollo local con PostgreSQL en Docker.
-El contenedor de MecaniaOS usa el puerto host `5433` para no chocar con otros proyectos.
+En este repo ya existe una `.env.local` para desarrollo local con PostgreSQL en Docker.
 
 ## Ejecucion local
 
@@ -81,7 +117,7 @@ pnpm docker:db:up
 pnpm db:generate
 ```
 
-4. Crear la base o aplicar esquema:
+4. Aplicar el esquema:
 
 ```bash
 pnpm db:push
@@ -98,27 +134,6 @@ pnpm db:seed
 ```bash
 pnpm dev
 ```
-
-## Flujo con Docker
-
-Uso recomendado para desarrollo de equipo:
-
-- App local con `pnpm dev`
-- Base de datos en Docker con `pnpm docker:db:up`
-
-Comandos utiles:
-
-- `pnpm docker:db:up`
-- `pnpm docker:db:down`
-- `pnpm docker:db:logs`
-
-Tambien deje preparada una imagen de la app:
-
-```bash
-pnpm docker:app:up
-```
-
-Eso levanta `db` y `app` juntos en contenedores.
 
 ## Credenciales seed
 
@@ -143,7 +158,7 @@ Eso levanta `db` y `app` juntos en contenedores.
 - `pnpm docker:app:up`
 - `pnpm docker:app:down`
 
-## Endpoints base
+## API disponible hoy
 
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
@@ -164,10 +179,16 @@ Eso levanta `db` y `app` juntos en contenedores.
 - `GET /api/work-orders/:id`
 - `PATCH /api/work-orders/:id`
 - `PATCH /api/work-orders/:id/status`
+- `GET /api/self-inspections`
+- `POST /api/self-inspections`
+- `GET /api/self-inspections/:id`
+- `POST /api/self-inspections/:id/review`
+- `PATCH /api/self-inspections/:id/status`
 
-## Siguiente fase sugerida
+## Proxima etapa recomendada
 
-- Inventario basico
-- Cotizaciones
-- Evidencias fotograficas
-- Portal cliente
+- modelar `quotes` y su aprobacion como disparador formal de la OT.
+- incorporar tareas en OT con progreso derivado.
+- abrir portal cliente luego de aprobacion de presupuesto.
+- agregar modelo de aseguradoras y liquidadores.
+- ampliar dashboard con KPIs del PRD.
