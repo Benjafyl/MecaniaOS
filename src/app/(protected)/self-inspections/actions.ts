@@ -18,18 +18,14 @@ export type InviteActionState = ActionState;
 
 export async function createSelfInspectionInviteAction(
   _previousState: InviteActionState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<InviteActionState> {
   try {
+    void _previousState;
+    void _formData;
     await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
-    const invite = await createSelfInspectionInvite({
-      fullName: String(formData.get("fullName") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      sourceChannel: String(formData.get("sourceChannel") ?? "SECURE_LINK"),
-      expiresInDays: String(formData.get("expiresInDays") ?? "7"),
-    });
+    const invite = await createSelfInspectionInvite({});
 
     revalidatePath("/self-inspections");
     redirect(`/self-inspections/${invite.inspectionId}?token=${invite.token}`);

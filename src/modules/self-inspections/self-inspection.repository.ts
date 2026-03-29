@@ -239,6 +239,13 @@ export const selfInspectionRepository = {
     });
   },
 
+  findPublicById(id: string) {
+    return prisma.selfInspection.findUnique({
+      where: { id },
+      include: publicWizardInclude,
+    });
+  },
+
   findSummaryById(id: string) {
     return prisma.selfInspection.findUnique({
       where: { id },

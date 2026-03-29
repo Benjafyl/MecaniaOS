@@ -44,8 +44,6 @@ export default async function PublicWizardPage({ params }: PublicWizardPageProps
       ) : (
         <SelfInspectionAccessScreen
           token={token}
-          customerName={pageData.access.customerName}
-          customerEmail={pageData.access.customerEmail}
           sessionEmail={pageData.access.sessionEmail}
           sessionRole={pageData.access.sessionRole}
           statusLabel={pageData.access.statusLabel}

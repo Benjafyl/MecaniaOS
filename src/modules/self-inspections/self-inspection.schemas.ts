@@ -98,9 +98,6 @@ export const selfInspectionReasonStepSchema = z.object({
 });
 
 export const createSelfInspectionInviteSchema = z.object({
-  fullName: requiredText(3, 120),
-  phone: requiredText(6, 32),
-  email: z.email().trim(),
   sourceChannel: z.nativeEnum(SelfInspectionSource).default(SelfInspectionSource.SECURE_LINK),
   expiresInDays: numberFromUnknown(1, 30).default(7),
 });
@@ -142,11 +139,14 @@ export const selfInspectionPhotoUploadSchema = z.object({
 export const publicSelfInspectionAccessSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("login"),
+    email: z.email().trim(),
     password: requiredText(8, 128),
   }),
   z
     .object({
       mode: z.literal("register"),
+      fullName: requiredText(3, 120),
+      email: z.email().trim(),
       password: requiredText(8, 128),
       confirmPassword: requiredText(8, 128),
     })

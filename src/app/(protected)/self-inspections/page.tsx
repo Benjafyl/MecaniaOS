@@ -76,8 +76,8 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
         <Card className="rounded-[32px]">
           <h2 className="font-heading text-2xl font-semibold">Generar enlace seguro</h2>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
-            Crea una autoinspeccion en borrador sin depender de seleccionar clientes o vehiculos
-            existentes.
+            Crea una autoinspeccion en borrador y comparte un link listo para usar. El cliente se
+            identificara al abrirlo.
           </p>
 
           <div className="mt-5">

@@ -70,9 +70,13 @@ type AnswerMap = Record<string, unknown>;
 type PublicInspectionEntity = NonNullable<
   Awaited<ReturnType<typeof selfInspectionRepository.findByAccessTokenHash>>
 >;
+type CustomerSession = NonNullable<Awaited<ReturnType<typeof getCurrentSession>>>;
 
 const FINAL_COMMENT_FIELD_KEY = "finalComment";
 const FINAL_COMMENT_NOTE_TYPE = SelfInspectionNoteType.CUSTOMER_OBSERVATION;
+const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SELF_INSPECTION_PENDING";
+const PENDING_SELF_INSPECTION_CLIENT_NAME = "Cliente por identificar";
+const PENDING_SELF_INSPECTION_EMAIL_DOMAIN = "self-inspection.pending.mecaniaos.local";
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
@@ -91,6 +95,27 @@ function hashAccessToken(token: string) {
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+function createPendingClientDraft() {
+  const suffix = randomBytes(10).toString("hex");
+
+  return {
+    fullName: PENDING_SELF_INSPECTION_CLIENT_NAME,
+    phone: "",
+    email: `pending+self-inspection-${suffix}@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`,
+    localIdentifier: `${PENDING_SELF_INSPECTION_CLIENT_PREFIX}:${suffix}`,
+  };
+}
+
+function isPendingInspectionCustomer(customer: {
+  email: string;
+  localIdentifier?: string | null;
+}) {
+  return (
+    customer.localIdentifier?.startsWith(PENDING_SELF_INSPECTION_CLIENT_PREFIX) === true ||
+    normalizeEmail(customer.email).endsWith(`@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`)
+  );
 }
 
 function getHigherRisk(
@@ -213,13 +238,19 @@ function buildContactSnapshot(
     fullName: string;
     phone: string;
     email: string;
+    localIdentifier?: string | null;
   },
   answersMap: AnswerMap,
 ) {
+  const isPendingCustomer = isPendingInspectionCustomer(customer);
+
   return {
-    fullName: String(answersMap.customer_full_name ?? customer.fullName ?? ""),
-    phone: String(answersMap.customer_phone ?? customer.phone ?? ""),
-    email: String(answersMap.customer_email ?? customer.email ?? ""),
+    fullName: String(
+      answersMap.customer_full_name ??
+        (isPendingCustomer ? PENDING_SELF_INSPECTION_CLIENT_NAME : customer.fullName ?? ""),
+    ),
+    phone: String(answersMap.customer_phone ?? (isPendingCustomer ? "" : customer.phone ?? "")),
+    email: String(answersMap.customer_email ?? (isPendingCustomer ? "" : customer.email ?? "")),
   };
 }
 
@@ -471,7 +502,75 @@ function canSessionAccessInspection(
     return false;
   }
 
+  if (isPendingInspectionCustomer(inspection.customer)) {
+    return true;
+  }
+
   return normalizeEmail(session.user.email) === normalizeEmail(inspection.customer.email);
+}
+
+async function claimPendingInspectionCustomer(
+  inspection: PublicInspectionEntity,
+  session: CustomerSession,
+) {
+  if (!isPendingInspectionCustomer(inspection.customer)) {
+    return inspection;
+  }
+
+  const normalizedEmail = normalizeEmail(session.user.email);
+
+  await prisma.$transaction(async (tx) => {
+    const currentInspection = await tx.selfInspection.findUnique({
+      where: {
+        id: inspection.id,
+      },
+      include: {
+        customer: true,
+      },
+    });
+
+    if (!currentInspection || !isPendingInspectionCustomer(currentInspection.customer)) {
+      return;
+    }
+
+    const existingCustomer = await tx.client.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    if (existingCustomer) {
+      await tx.selfInspection.update({
+        where: {
+          id: inspection.id,
+        },
+        data: {
+          customerId: existingCustomer.id,
+        },
+      });
+
+      return;
+    }
+
+    await tx.client.update({
+      where: {
+        id: currentInspection.customer.id,
+      },
+      data: {
+        fullName: session.user.name.trim() || PENDING_SELF_INSPECTION_CLIENT_NAME,
+        email: normalizedEmail,
+        localIdentifier: null,
+      },
+    });
+  });
+
+  return getPublicSelfInspectionEntityById(inspection.id);
 }
 
 async function getPublicSelfInspectionEntity(token: string) {
@@ -483,6 +582,16 @@ async function getPublicSelfInspectionEntity(token: string) {
 
   if (inspection.accessTokenExpiresAt && inspection.accessTokenExpiresAt < new Date()) {
     throw new AppError("El enlace seguro ha expirado", 410);
+  }
+
+  return inspection;
+}
+
+async function getPublicSelfInspectionEntityById(id: string) {
+  const inspection = await selfInspectionRepository.findPublicById(id);
+
+  if (!inspection) {
+    throw new NotFoundError("Autoinspeccion no encontrada");
   }
 
   return inspection;
@@ -504,7 +613,7 @@ async function getAuthorizedPublicSelfInspectionEntity(token: string) {
     throw new ForbiddenError("Esta autoinspeccion fue enviada a otro correo");
   }
 
-  return inspection;
+  return claimPendingInspectionCustomer(inspection, session);
 }
 
 async function assertInspectionCustomerEditableByToken(token: string) {
@@ -830,43 +939,15 @@ export async function getSelfInspectionById(id: string) {
 
 export async function createSelfInspectionInvite(input: unknown) {
   const data = createSelfInspectionInviteSchema.parse(input) as CreateSelfInspectionInviteInput;
-  const normalizedEmail = normalizeEmail(data.email);
-
   const rawToken = createAccessToken();
   const accessTokenHash = hashAccessToken(rawToken);
   const accessTokenExpiresAt = new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000);
+  const pendingClient = createPendingClientDraft();
 
   const created = await prisma.$transaction(async (tx) => {
-    const existingCustomer = await tx.client.findFirst({
-      where: {
-        email: {
-          equals: normalizedEmail,
-          mode: "insensitive",
-        },
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
+    const customer = await tx.client.create({
+      data: pendingClient,
     });
-
-    const customer = existingCustomer
-      ? await tx.client.update({
-          where: {
-            id: existingCustomer.id,
-          },
-          data: {
-            fullName: data.fullName,
-            phone: data.phone,
-            email: normalizedEmail,
-          },
-        })
-      : await tx.client.create({
-          data: {
-            fullName: data.fullName,
-            phone: data.phone,
-            email: normalizedEmail,
-          },
-        });
 
     const inspection = await tx.selfInspection.create({
       data: {
@@ -909,19 +990,19 @@ export async function createSelfInspectionInvite(input: unknown) {
 }
 
 export async function getPublicSelfInspectionStartPageData(token: string) {
-  const inspection = await getPublicSelfInspectionEntity(token);
+  let inspection = await getPublicSelfInspectionEntity(token);
   const session = await getCurrentSession();
-  const answersMap = mapAnswersToRecord(inspection.answers);
-  const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
   const authorized = canSessionAccessInspection(session, inspection);
+
+  if (authorized && session?.user.role === UserRole.CUSTOMER) {
+    inspection = await claimPendingInspectionCustomer(inspection, session);
+  }
 
   return {
     access: {
       authorized,
       sessionEmail: session?.user.email ?? null,
       sessionRole: session?.user.role ?? null,
-      customerName: contactSnapshot.fullName,
-      customerEmail: inspection.customer.email,
       status: inspection.status,
       statusLabel: SELF_INSPECTION_STATUS_LABELS[inspection.status],
     },
@@ -932,7 +1013,7 @@ export async function getPublicSelfInspectionStartPageData(token: string) {
 export async function authorizePublicSelfInspectionAccess(token: string, input: unknown) {
   const inspection = await getPublicSelfInspectionEntity(token);
   const data = publicSelfInspectionAccessSchema.parse(input);
-  const email = normalizeEmail(inspection.customer.email);
+  const email = normalizeEmail(data.email);
 
   if (data.mode === "register") {
     const existing = await userRepository.findByEmail(email);
@@ -950,7 +1031,7 @@ export async function authorizePublicSelfInspectionAccess(token: string, input: 
     }
 
     await userRepository.create({
-      name: inspection.customer.fullName,
+      name: data.fullName,
       email,
       passwordHash: await hash(data.password, 10),
       role: UserRole.CUSTOMER,
@@ -967,10 +1048,17 @@ export async function authorizePublicSelfInspectionAccess(token: string, input: 
     throw new ForbiddenError("Esta autoinspeccion requiere una cuenta de cliente");
   }
 
+  if (
+    !isPendingInspectionCustomer(inspection.customer) &&
+    normalizeEmail(inspection.customer.email) !== email
+  ) {
+    await signOut();
+    throw new ForbiddenError("Esta autoinspeccion ya esta asociada a otra cuenta");
+  }
+
   return {
     authorized: true,
-    customerName: inspection.customer.fullName,
-    customerEmail: inspection.customer.email,
+    customerEmail: email,
   };
 }
 
