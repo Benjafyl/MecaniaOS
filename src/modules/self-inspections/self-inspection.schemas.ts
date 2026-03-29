@@ -98,8 +98,9 @@ export const selfInspectionReasonStepSchema = z.object({
 });
 
 export const createSelfInspectionInviteSchema = z.object({
-  customerId: requiredText(1, 40),
-  vehicleId: z.preprocess(emptyToUndefined, z.string().trim().max(40).optional()),
+  fullName: requiredText(3, 120),
+  phone: requiredText(6, 32),
+  email: z.email().trim(),
   sourceChannel: z.nativeEnum(SelfInspectionSource).default(SelfInspectionSource.SECURE_LINK),
   expiresInDays: numberFromUnknown(1, 30).default(7),
 });

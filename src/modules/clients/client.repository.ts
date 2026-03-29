@@ -66,6 +66,20 @@ export const clientRepository = {
     });
   },
 
+  findByEmail(email: string) {
+    return prisma.client.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+  },
+
   create(data: Prisma.ClientCreateInput) {
     return prisma.client.create({ data });
   },

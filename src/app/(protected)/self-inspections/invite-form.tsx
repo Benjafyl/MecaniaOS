@@ -10,48 +10,32 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { initialActionState } from "@/lib/form-state";
 import { SELF_INSPECTION_SOURCE_LABELS } from "@/modules/self-inspections/self-inspection.constants";
 
-type InviteFormProps = {
-  clients: Array<{
-    id: string;
-    fullName: string;
-  }>;
-  vehicles: Array<{
-    id: string;
-    label: string;
-  }>;
-};
-
-export function InviteForm({ clients, vehicles }: InviteFormProps) {
+export function InviteForm() {
   const [state, formAction] = useActionState(createSelfInspectionInviteAction, initialActionState);
 
   return (
     <form action={formAction} className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="customerId">
-          Cliente
-        </label>
-        <Select id="customerId" name="customerId">
-          <option value="">Selecciona un cliente</option>
-          {clients.map((client) => (
-            <option key={client.id} value={client.id}>
-              {client.fullName}
-            </option>
-          ))}
-        </Select>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="fullName">
+            Nombre del cliente
+          </label>
+          <Input id="fullName" name="fullName" placeholder="Ej: Juan Perez" />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="phone">
+            Telefono
+          </label>
+          <Input id="phone" name="phone" placeholder="+56 9 1234 5678" />
+        </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="vehicleId">
-          Vehiculo asociado
+        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="email">
+          Correo del cliente
         </label>
-        <Select id="vehicleId" name="vehicleId">
-          <option value="">El cliente lo definira en el wizard</option>
-          {vehicles.map((vehicle) => (
-            <option key={vehicle.id} value={vehicle.id}>
-              {vehicle.label}
-            </option>
-          ))}
-        </Select>
+        <Input id="email" name="email" placeholder="cliente@correo.com" type="email" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -74,6 +58,11 @@ export function InviteForm({ clients, vehicles }: InviteFormProps) {
           </label>
           <Input defaultValue="7" id="expiresInDays" min="1" name="expiresInDays" type="number" />
         </div>
+      </div>
+
+      <div className="rounded-[20px] border border-[rgba(14,79,82,0.14)] bg-[rgba(14,79,82,0.06)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
+        Si el correo ya existe, reutilizamos ese cliente. Si no existe, se crea automaticamente
+        para que no dependas de tu base de datos antes de generar el enlace.
       </div>
 
       <FormMessage message={state.error} />

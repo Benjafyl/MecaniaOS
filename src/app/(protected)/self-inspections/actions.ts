@@ -24,8 +24,9 @@ export async function createSelfInspectionInviteAction(
     await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
     const invite = await createSelfInspectionInvite({
-      customerId: String(formData.get("customerId") ?? ""),
-      vehicleId: String(formData.get("vehicleId") ?? ""),
+      fullName: String(formData.get("fullName") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      email: String(formData.get("email") ?? ""),
       sourceChannel: String(formData.get("sourceChannel") ?? "SECURE_LINK"),
       expiresInDays: String(formData.get("expiresInDays") ?? "7"),
     });

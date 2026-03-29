@@ -253,15 +253,6 @@ export const selfInspectionRepository = {
     });
   },
 
-  findVehicleForCustomer(customerId: string, vehicleId: string) {
-    return prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        clientId: customerId,
-      },
-    });
-  },
-
   create(data: Prisma.SelfInspectionCreateInput) {
     return prisma.selfInspection.create({
       data,

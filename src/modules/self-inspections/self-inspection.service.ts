@@ -830,56 +830,53 @@ export async function getSelfInspectionById(id: string) {
 
 export async function createSelfInspectionInvite(input: unknown) {
   const data = createSelfInspectionInviteSchema.parse(input) as CreateSelfInspectionInviteInput;
-  const customer = await prisma.client.findUnique({
-    where: { id: data.customerId },
-    include: {
-      vehicles: true,
-    },
-  });
-
-  if (!customer) {
-    throw new NotFoundError("Cliente no encontrado");
-  }
-
-  let vehicle = data.vehicleId
-    ? await selfInspectionRepository.findVehicleForCustomer(data.customerId, data.vehicleId)
-    : null;
-
-  if (data.vehicleId && !vehicle) {
-    throw new ConflictError("El vehiculo no pertenece al cliente seleccionado");
-  }
+  const normalizedEmail = normalizeEmail(data.email);
 
   const rawToken = createAccessToken();
   const accessTokenHash = hashAccessToken(rawToken);
   const accessTokenExpiresAt = new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000);
 
   const created = await prisma.$transaction(async (tx) => {
+    const existingCustomer = await tx.client.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    const customer = existingCustomer
+      ? await tx.client.update({
+          where: {
+            id: existingCustomer.id,
+          },
+          data: {
+            fullName: data.fullName,
+            phone: data.phone,
+            email: normalizedEmail,
+          },
+        })
+      : await tx.client.create({
+          data: {
+            fullName: data.fullName,
+            phone: data.phone,
+            email: normalizedEmail,
+          },
+        });
+
     const inspection = await tx.selfInspection.create({
       data: {
-        customerId: data.customerId,
-        vehicleId: vehicle?.id,
+        customerId: customer.id,
         sourceChannel: data.sourceChannel,
         accessTokenHash,
         accessTokenExpiresAt,
         status: SelfInspectionStatus.DRAFT,
         lastCompletedStep: 0,
         completionPercent: 0,
-        vehicleSnapshot: vehicle
-          ? {
-              create: {
-                plate: vehicle.plate,
-                vin: vehicle.vin,
-                make: vehicle.make,
-                model: vehicle.model,
-                year: vehicle.year,
-                color: vehicle.color,
-                mileage: vehicle.mileage ?? 0,
-                fuelType: vehicle.fuelType ?? VehicleFuelType.OTHER,
-                transmission: vehicle.transmission ?? VehicleTransmissionType.OTHER,
-                starts: true,
-              },
-            }
-          : undefined,
       },
     });
 
@@ -892,26 +889,22 @@ export async function createSelfInspectionInvite(input: unknown) {
       },
     });
 
-    return inspection;
+    return {
+      inspection,
+      customer,
+    };
   });
 
-  vehicle = vehicle ?? customer.vehicles[0] ?? null;
-
   return {
-    inspectionId: created.id,
+    inspectionId: created.inspection.id,
     token: rawToken,
     accessTokenExpiresAt,
     publicPath: `/self-inspections/start/${rawToken}`,
     customer: {
-      id: customer.id,
-      fullName: customer.fullName,
+      id: created.customer.id,
+      fullName: created.customer.fullName,
     },
-    vehicle: vehicle
-      ? {
-          id: vehicle.id,
-          label: `${vehicle.make} ${vehicle.model} / ${vehicle.plate ?? "Sin patente"}`,
-        }
-      : null,
+    vehicle: null,
   };
 }
 
