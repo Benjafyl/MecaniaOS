@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { BooleanSegmentField } from "@/components/self-inspections/boolean-segment-field";
@@ -608,6 +609,15 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
               </p>
             </div>
           ) : null}
+
+          <div className="mt-6 flex justify-start">
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-transparent bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(37,99,235,0.18)] transition hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(36,88,198,0.14)]"
+              href="/login"
+            >
+              Ir al login principal
+            </Link>
+          </div>
         </Card>
       ) : null}
     </div>
