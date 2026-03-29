@@ -74,7 +74,7 @@ type CustomerSession = NonNullable<Awaited<ReturnType<typeof getCurrentSession>>
 
 const FINAL_COMMENT_FIELD_KEY = "finalComment";
 const FINAL_COMMENT_NOTE_TYPE = SelfInspectionNoteType.CUSTOMER_OBSERVATION;
-const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SELF_INSPECTION_PENDING";
+const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SI_PENDING";
 const PENDING_SELF_INSPECTION_CLIENT_NAME = "Cliente por identificar";
 const PENDING_SELF_INSPECTION_EMAIL_DOMAIN = "self-inspection.pending.mecaniaos.local";
 
