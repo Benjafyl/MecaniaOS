@@ -1,20 +1,6 @@
-import { apiError, apiResponse } from "@/lib/http";
-import { savePublicSelfInspectionDamage } from "@/modules/self-inspections/self-inspection.service";
+import { AppError } from "@/lib/errors";
+import { apiError } from "@/lib/http";
 
-type RouteContext = {
-  params: Promise<{
-    token: string;
-  }>;
-};
-
-export async function PUT(request: Request, { params }: RouteContext) {
-  try {
-    const body = await request.json();
-    const { token } = await params;
-    const inspection = await savePublicSelfInspectionDamage(token, body);
-
-    return apiResponse(inspection);
-  } catch (error) {
-    return apiError(error);
-  }
+export async function PUT() {
+  return apiError(new AppError("Esta version de la autoinspeccion ya no utiliza este paso", 410));
 }

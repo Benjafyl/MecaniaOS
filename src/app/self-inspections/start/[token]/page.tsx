@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { normalizeError } from "@/lib/errors";
-import {
-  getPublicSelfInspectionWizard,
-  type PublicSelfInspectionWizardData,
-} from "@/modules/self-inspections/self-inspection.service";
+import { getPublicSelfInspectionStartPageData } from "@/modules/self-inspections/self-inspection.service";
+import { SelfInspectionAccessScreen } from "@/app/self-inspections/start/[token]/self-inspection-access-screen";
 import { SelfInspectionWizard } from "@/app/self-inspections/start/[token]/self-inspection-wizard";
 
 type PublicWizardPageProps = {
@@ -16,7 +14,7 @@ type PublicWizardPageProps = {
 
 export default async function PublicWizardPage({ params }: PublicWizardPageProps) {
   const { token } = await params;
-  const initialData = await getPublicSelfInspectionWizard(token).catch((error) => {
+  const pageData = await getPublicSelfInspectionStartPageData(token).catch((error) => {
     const normalized = normalizeError(error);
 
     if (normalized.statusCode === 404 || normalized.statusCode === 410) {
@@ -27,23 +25,32 @@ export default async function PublicWizardPage({ params }: PublicWizardPageProps
   });
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1200px] flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <Card className="rounded-[32px] bg-[linear-gradient(135deg,rgba(255,250,240,0.96),rgba(237,242,241,0.98))]">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1160px] flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <Card className="rounded-[32px] border-[rgba(14,79,82,0.12)] bg-[linear-gradient(135deg,rgba(255,248,238,0.98),rgba(239,247,245,0.98))]">
         <p className="text-xs uppercase tracking-[0.24em] text-[color:var(--muted)]">
-          Autoinspeccion del Vehiculo
+          Autoinspeccion del vehiculo
         </p>
         <h1 className="mt-3 font-heading text-4xl font-semibold">
-          Recepcion digital previa al taller
+          Diagnostico previo simple y rapido
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-[color:var(--muted-strong)]">
-          Esta autoinspeccion ayuda al taller a levantar sintomas, danos visibles y estado
-          general del vehiculo antes de una revision tecnica inicial. No reemplaza una
-          evaluacion profesional. Responde con la mayor precision posible y toma las fotos
-          solo en un lugar seguro y bien iluminado.
+          Completa solo lo necesario para que el taller entienda el problema principal, vea tu
+          vehiculo con contexto y llegue mejor preparado a la revision presencial.
         </p>
       </Card>
 
-      <SelfInspectionWizard initialData={initialData as PublicSelfInspectionWizardData} token={token} />
+      {pageData.wizardData ? (
+        <SelfInspectionWizard token={token} initialData={pageData.wizardData} />
+      ) : (
+        <SelfInspectionAccessScreen
+          token={token}
+          customerName={pageData.access.customerName}
+          customerEmail={pageData.access.customerEmail}
+          sessionEmail={pageData.access.sessionEmail}
+          sessionRole={pageData.access.sessionRole}
+          statusLabel={pageData.access.statusLabel}
+        />
+      )}
     </div>
   );
 }
