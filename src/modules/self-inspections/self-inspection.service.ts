@@ -506,7 +506,19 @@ function canSessionAccessInspection(
     return true;
   }
 
+  if (session.user.clientId) {
+    return session.user.clientId === inspection.customer.id;
+  }
+
   return normalizeEmail(session.user.email) === normalizeEmail(inspection.customer.email);
+}
+
+async function ensureCustomerAccountLinkedToClient(session: CustomerSession, clientId: string) {
+  if (session.user.clientId === clientId) {
+    return;
+  }
+
+  await userRepository.linkClient(session.user.id, clientId);
 }
 
 async function claimPendingInspectionCustomer(
@@ -514,6 +526,7 @@ async function claimPendingInspectionCustomer(
   session: CustomerSession,
 ) {
   if (!isPendingInspectionCustomer(inspection.customer)) {
+    await ensureCustomerAccountLinkedToClient(session, inspection.customer.id);
     return inspection;
   }
 
@@ -533,17 +546,27 @@ async function claimPendingInspectionCustomer(
       return;
     }
 
-    const existingCustomer = await tx.client.findFirst({
-      where: {
-        email: {
-          equals: normalizedEmail,
-          mode: "insensitive",
-        },
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-    });
+    const linkedCustomer = session.user.clientId
+      ? await tx.client.findUnique({
+          where: {
+            id: session.user.clientId,
+          },
+        })
+      : null;
+    const existingCustomer =
+      linkedCustomer && !isPendingInspectionCustomer(linkedCustomer)
+        ? linkedCustomer
+        : await tx.client.findFirst({
+            where: {
+              email: {
+                equals: normalizedEmail,
+                mode: "insensitive",
+              },
+            },
+            orderBy: {
+              updatedAt: "desc",
+            },
+          });
 
     if (existingCustomer) {
       await tx.selfInspection.update({
@@ -554,6 +577,21 @@ async function claimPendingInspectionCustomer(
           customerId: existingCustomer.id,
         },
       });
+
+      if (session.user.clientId !== existingCustomer.id) {
+        await tx.user.update({
+          where: {
+            id: session.user.id,
+          },
+          data: {
+            client: {
+              connect: {
+                id: existingCustomer.id,
+              },
+            },
+          },
+        });
+      }
 
       return;
     }
@@ -568,6 +606,21 @@ async function claimPendingInspectionCustomer(
         localIdentifier: null,
       },
     });
+
+    if (session.user.clientId !== currentInspection.customer.id) {
+      await tx.user.update({
+        where: {
+          id: session.user.id,
+        },
+        data: {
+          client: {
+            connect: {
+              id: currentInspection.customer.id,
+            },
+          },
+        },
+      });
+    }
   });
 
   return getPublicSelfInspectionEntityById(inspection.id);
@@ -1035,6 +1088,7 @@ export async function authorizePublicSelfInspectionAccess(token: string, input: 
       email,
       passwordHash: await hash(data.password, 10),
       role: UserRole.CUSTOMER,
+      clientId: inspection.customer.id,
     });
   }
 

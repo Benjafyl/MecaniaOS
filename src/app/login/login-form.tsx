@@ -52,7 +52,7 @@ export function LoginForm() {
       />
 
       <p className="text-xs leading-5 text-[#5f7fa8]">
-        Usa una cuenta interna para acceder a recepcion, ordenes de trabajo y seguimiento del taller.
+        Usa tu cuenta para acceder al panel interno o al portal de seguimiento de tu vehiculo.
       </p>
     </form>
   );

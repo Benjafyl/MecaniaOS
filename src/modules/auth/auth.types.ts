@@ -6,6 +6,7 @@ export type PublicUser = {
   email: string;
   role: UserRole;
   active: boolean;
+  clientId?: string | null;
 };
 
 export type AuthSession = {

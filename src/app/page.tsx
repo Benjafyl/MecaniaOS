@@ -6,5 +6,9 @@ import { getCurrentSession } from "@/modules/auth/auth.service";
 export default async function HomePage() {
   const session = await getCurrentSession();
 
-  redirect(session && session.user.role !== UserRole.CUSTOMER ? "/dashboard" : "/login");
+  if (!session) {
+    redirect("/login");
+  }
+
+  redirect(session.user.role === UserRole.CUSTOMER ? "/portal" : "/dashboard");
 }
