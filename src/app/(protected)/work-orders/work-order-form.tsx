@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { ChangeEvent, useActionState, useState } from "react";
 import { WorkOrderStatus } from "@prisma/client";
 
 import { createWorkOrderAction } from "@/app/(protected)/work-orders/actions";
@@ -19,6 +19,7 @@ type WorkOrderFormProps = {
   }>;
   vehicles: Array<{
     id: string;
+    clientId: string;
     label: string;
   }>;
   mechanics: Array<{
@@ -37,6 +38,33 @@ export function WorkOrderForm({
   defaultVehicleId,
 }: WorkOrderFormProps) {
   const [state, formAction] = useActionState(createWorkOrderAction, initialActionState);
+  const initialClientId =
+    defaultClientId ?? vehicles.find((vehicle) => vehicle.id === defaultVehicleId)?.clientId ?? "";
+  const [selectedClientId, setSelectedClientId] = useState(initialClientId);
+  const [selectedVehicleId, setSelectedVehicleId] = useState(() => {
+    if (!defaultVehicleId) {
+      return "";
+    }
+
+    const defaultVehicle = vehicles.find((vehicle) => vehicle.id === defaultVehicleId);
+    return defaultVehicle?.clientId === initialClientId ? defaultVehicleId : "";
+  });
+  const availableVehicles = selectedClientId
+    ? vehicles.filter((vehicle) => vehicle.clientId === selectedClientId)
+    : [];
+
+  function handleClientChange(event: ChangeEvent<HTMLSelectElement>) {
+    const nextClientId = event.target.value;
+    setSelectedClientId(nextClientId);
+
+    const currentVehicleBelongsToNextClient = vehicles.some(
+      (vehicle) => vehicle.id === selectedVehicleId && vehicle.clientId === nextClientId,
+    );
+
+    if (!nextClientId || !currentVehicleBelongsToNextClient) {
+      setSelectedVehicleId("");
+    }
+  }
 
   return (
     <form action={formAction} className="space-y-5">
@@ -45,7 +73,12 @@ export function WorkOrderForm({
           <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="clientId">
             Cliente
           </label>
-          <Select defaultValue={defaultClientId} id="clientId" name="clientId">
+          <Select
+            id="clientId"
+            name="clientId"
+            onChange={handleClientChange}
+            value={selectedClientId}
+          >
             <option value="">Selecciona un cliente</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
@@ -59,9 +92,17 @@ export function WorkOrderForm({
           <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="vehicleId">
             Vehiculo
           </label>
-          <Select defaultValue={defaultVehicleId} id="vehicleId" name="vehicleId">
-            <option value="">Selecciona un vehiculo</option>
-            {vehicles.map((vehicle) => (
+          <Select
+            disabled={!selectedClientId}
+            id="vehicleId"
+            name="vehicleId"
+            onChange={(event) => setSelectedVehicleId(event.target.value)}
+            value={selectedVehicleId}
+          >
+            <option value="">
+              {selectedClientId ? "Selecciona un vehiculo" : "Selecciona primero un cliente"}
+            </option>
+            {availableVehicles.map((vehicle) => (
               <option key={vehicle.id} value={vehicle.id}>
                 {vehicle.label}
               </option>
