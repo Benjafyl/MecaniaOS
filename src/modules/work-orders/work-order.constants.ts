@@ -19,6 +19,31 @@ export const WORK_ORDER_STATUS_OPTIONS = Object.entries(WORK_ORDER_STATUS_LABELS
   }),
 );
 
+export const WORK_ORDER_PROGRESS_FLOW: WorkOrderStatus[] = [
+  WorkOrderStatus.RECEIVED,
+  WorkOrderStatus.IN_DIAGNOSIS,
+  WorkOrderStatus.WAITING_APPROVAL,
+  WorkOrderStatus.WAITING_PARTS,
+  WorkOrderStatus.IN_REPAIR,
+  WorkOrderStatus.IN_PAINT,
+  WorkOrderStatus.READY_FOR_DELIVERY,
+  WorkOrderStatus.DELIVERED,
+];
+
+export function getWorkOrderProgressPercent(status: WorkOrderStatus) {
+  if (status === WorkOrderStatus.CANCELLED) {
+    return 0;
+  }
+
+  const index = WORK_ORDER_PROGRESS_FLOW.indexOf(status);
+
+  if (index === -1) {
+    return 0;
+  }
+
+  return Math.round(((index + 1) / WORK_ORDER_PROGRESS_FLOW.length) * 100);
+}
+
 export function isClosedStatus(status: WorkOrderStatus) {
   return status === WorkOrderStatus.DELIVERED || status === WorkOrderStatus.CANCELLED;
 }

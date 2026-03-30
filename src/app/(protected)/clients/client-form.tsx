@@ -54,6 +54,25 @@ export function ClientForm() {
         <Textarea id="address" name="address" placeholder="Direccion opcional del cliente" />
       </div>
 
+      <div className="space-y-2">
+        <label
+          className="text-sm font-medium text-[color:var(--muted-strong)]"
+          htmlFor="portalPassword"
+        >
+          Contrasena del portal
+        </label>
+        <Input
+          id="portalPassword"
+          name="portalPassword"
+          placeholder="Opcional, minimo 8 caracteres"
+          type="password"
+        />
+        <p className="text-xs text-[color:var(--muted)]">
+          Si completas este campo, el cliente quedara con acceso habilitado al portal usando su
+          correo.
+        </p>
+      </div>
+
       <FormMessage message={state.error} />
 
       <SubmitButton label="Crear cliente" pendingLabel="Creando cliente..." />

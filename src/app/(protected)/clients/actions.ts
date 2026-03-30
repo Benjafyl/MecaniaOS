@@ -21,6 +21,7 @@ export async function createClientAction(
       phone: String(formData.get("phone") ?? ""),
       email: String(formData.get("email") ?? ""),
       address: String(formData.get("address") ?? ""),
+      portalPassword: String(formData.get("portalPassword") ?? ""),
     });
   } catch (error) {
     return {

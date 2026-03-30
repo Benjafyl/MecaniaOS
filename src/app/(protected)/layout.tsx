@@ -19,7 +19,7 @@ export default async function ProtectedLayout({
   }
 
   if (session.user.role === UserRole.CUSTOMER) {
-    redirect("/login");
+    redirect("/portal");
   }
 
   return (

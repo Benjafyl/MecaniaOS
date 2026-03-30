@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
 import type { ActionState } from "@/lib/form-state";
@@ -10,16 +11,20 @@ export async function loginAction(
   _previousState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  let destination = "/dashboard";
+
   try {
-    await signIn({
+    const user = await signIn({
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
     });
+
+    destination = user.role === UserRole.CUSTOMER ? "/portal" : "/dashboard";
   } catch (error) {
     return {
       error: getErrorMessage(error),
     };
   }
 
-  redirect("/dashboard");
+  redirect(destination);
 }
