@@ -34,19 +34,12 @@ export default async function LoginPage() {
           </div>
 
           <div className="mt-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-[#5f7fa8]">
-              Inicio de sesion
-            </p>
-            <h1 className="mt-3 font-heading text-3xl font-semibold leading-tight text-[color:var(--foreground)] sm:text-4xl">
-              Un login simple para entrar al taller
+            <h1 className="font-heading text-2xl font-semibold text-[color:var(--foreground)] sm:text-3xl">
+              Iniciar sesion
             </h1>
-            <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">
-              Accede al panel operativo con una sola pantalla, usando la misma identidad visual del
-              resto del sistema.
-            </p>
           </div>
 
-          <div className="mt-8 rounded-[24px] border border-[rgba(37,99,235,0.12)] bg-[linear-gradient(180deg,rgba(236,244,255,0.88),rgba(247,250,254,0.92))] p-4">
+          <div className="mt-6 rounded-[24px] border border-[rgba(37,99,235,0.12)] bg-[linear-gradient(180deg,rgba(236,244,255,0.88),rgba(247,250,254,0.92))] p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] uppercase tracking-[0.22em] text-[#5f7fa8]">
                 Credenciales de prueba
