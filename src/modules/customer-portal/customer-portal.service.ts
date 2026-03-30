@@ -1,7 +1,7 @@
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { requireCustomerUser } from "@/modules/auth/auth.service";
-import { WorkOrderStatus } from "@prisma/client";
+import { SelfInspectionStatus, WorkOrderStatus } from "@prisma/client";
 import {
   getWorkOrderProgressPercent,
   isClosedStatus,
@@ -13,6 +13,14 @@ function getCurrentOrLatestWorkOrder<T extends { status: Parameters<typeof isClo
   return workOrders.find((workOrder) => !isClosedStatus(workOrder.status)) ?? workOrders[0] ?? null;
 }
 
+const CUSTOMER_PORTAL_PENDING_INSPECTION_STATUSES = [
+  SelfInspectionStatus.DRAFT,
+  SelfInspectionStatus.IN_PROGRESS,
+  SelfInspectionStatus.SUBMITTED,
+  SelfInspectionStatus.UNDER_REVIEW,
+  SelfInspectionStatus.REVIEWED,
+] as const;
+
 export async function getCustomerPortalOverview() {
   const session = await requireCustomerUser();
 
@@ -20,8 +28,10 @@ export async function getCustomerPortalOverview() {
     return {
       customer: null,
       vehicles: [],
+      pendingInspections: [],
       stats: {
         vehicles: 0,
+        pendingInspections: 0,
         openOrders: 0,
         readyForDelivery: 0,
       },
@@ -53,6 +63,20 @@ export async function getCustomerPortalOverview() {
           createdAt: "desc",
         },
       },
+      selfInspections: {
+        where: {
+          vehicleId: null,
+          status: {
+            in: [...CUSTOMER_PORTAL_PENDING_INSPECTION_STATUSES],
+          },
+        },
+        include: {
+          vehicleSnapshot: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
 
@@ -69,6 +93,10 @@ export async function getCustomerPortalOverview() {
       progressPercent: currentOrder ? getWorkOrderProgressPercent(currentOrder.status) : 0,
     };
   });
+  const pendingInspections = customer.selfInspections.map((inspection) => ({
+    ...inspection,
+    progressPercent: inspection.completionPercent,
+  }));
 
   const openOrders = vehicles.filter(
     (vehicle) => vehicle.currentOrder && !isClosedStatus(vehicle.currentOrder.status),
@@ -80,8 +108,10 @@ export async function getCustomerPortalOverview() {
   return {
     customer,
     vehicles,
+    pendingInspections,
     stats: {
       vehicles: vehicles.length,
+      pendingInspections: pendingInspections.length,
       openOrders,
       readyForDelivery,
     },

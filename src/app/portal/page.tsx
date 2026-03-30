@@ -5,6 +5,10 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/utils";
 import { getCustomerPortalOverview } from "@/modules/customer-portal/customer-portal.service";
+import {
+  SELF_INSPECTION_RISK_LABELS,
+  SELF_INSPECTION_STATUS_LABELS,
+} from "@/modules/self-inspections/self-inspection.constants";
 
 export default async function CustomerPortalPage() {
   const portal = await getCustomerPortalOverview();
@@ -35,10 +39,11 @@ export default async function CustomerPortalPage() {
           Hola, {portal.customer.fullName}
         </h1>
         <p className="mt-3 text-sm text-[color:var(--muted-strong)]">
-          Aqui puedes revisar solo tus vehiculos, su estado actual y el avance de cada orden.
+          Aqui puedes revisar solo tus vehiculos, los ingresos recibidos desde autoinspeccion y el
+          avance de cada caso.
         </p>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
               Vehiculos
@@ -53,6 +58,14 @@ export default async function CustomerPortalPage() {
           </div>
           <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Autoinspecciones
+            </p>
+            <p className="mt-2 font-heading text-3xl font-semibold">
+              {portal.stats.pendingInspections}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
               Listos para retiro
             </p>
             <p className="mt-2 font-heading text-3xl font-semibold">{portal.stats.readyForDelivery}</p>
@@ -60,68 +73,166 @@ export default async function CustomerPortalPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {portal.vehicles.map((vehicle) => (
-          <Card className="rounded-2xl" key={vehicle.id}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Vehiculo
-                </p>
-                <h2 className="mt-2 font-heading text-2xl font-semibold">
-                  {vehicle.make} {vehicle.model}
-                </h2>
-                <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                  {vehicle.plate ?? "Sin patente"} / VIN {vehicle.vin}
-                </p>
-              </div>
-              {vehicle.currentOrder ? <StatusBadge status={vehicle.currentOrder.status} /> : null}
-            </div>
+      {portal.vehicles.length > 0 ? (
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Vehiculos registrados
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold">Tus vehiculos en taller</h2>
+          </div>
 
-            {vehicle.currentOrder ? (
-              <div className="mt-5 space-y-4">
-                <WorkOrderProgress status={vehicle.currentOrder.status} />
-                <div className="text-sm text-[color:var(--muted-strong)]">
-                  <p>
-                    <span className="font-semibold text-[color:var(--foreground)]">Orden:</span>{" "}
-                    {vehicle.currentOrder.orderNumber}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-[color:var(--foreground)]">Motivo:</span>{" "}
-                    {vehicle.currentOrder.reason}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-[color:var(--foreground)]">Ingreso:</span>{" "}
-                    {formatDate(vehicle.currentOrder.intakeDate)}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-[color:var(--foreground)]">Entrega estimada:</span>{" "}
-                    {formatDate(vehicle.currentOrder.estimatedDate)}
-                  </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {portal.vehicles.map((vehicle) => (
+              <Card className="rounded-2xl" key={vehicle.id}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                      Vehiculo
+                    </p>
+                    <h2 className="mt-2 font-heading text-2xl font-semibold">
+                      {vehicle.make} {vehicle.model}
+                    </h2>
+                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                      {vehicle.plate ?? "Sin patente"} / VIN {vehicle.vin}
+                    </p>
+                  </div>
+                  {vehicle.currentOrder ? <StatusBadge status={vehicle.currentOrder.status} /> : null}
                 </div>
-              </div>
-            ) : (
-              <p className="mt-5 text-sm text-[color:var(--muted)]">
-                Este vehiculo aun no tiene ordenes de trabajo registradas.
-              </p>
-            )}
 
-            <div className="mt-6 flex justify-end">
-              <Link
-                className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
-                href={`/portal/vehicles/${vehicle.id}`}
-              >
-                Ver detalle
-              </Link>
-            </div>
-          </Card>
-        ))}
-      </div>
+                {vehicle.currentOrder ? (
+                  <div className="mt-5 space-y-4">
+                    <WorkOrderProgress status={vehicle.currentOrder.status} />
+                    <div className="text-sm text-[color:var(--muted-strong)]">
+                      <p>
+                        <span className="font-semibold text-[color:var(--foreground)]">Orden:</span>{" "}
+                        {vehicle.currentOrder.orderNumber}
+                      </p>
+                      <p className="mt-1">
+                        <span className="font-semibold text-[color:var(--foreground)]">
+                          Motivo:
+                        </span>{" "}
+                        {vehicle.currentOrder.reason}
+                      </p>
+                      <p className="mt-1">
+                        <span className="font-semibold text-[color:var(--foreground)]">
+                          Ingreso:
+                        </span>{" "}
+                        {formatDate(vehicle.currentOrder.intakeDate)}
+                      </p>
+                      <p className="mt-1">
+                        <span className="font-semibold text-[color:var(--foreground)]">
+                          Entrega estimada:
+                        </span>{" "}
+                        {formatDate(vehicle.currentOrder.estimatedDate)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-5 text-sm text-[color:var(--muted)]">
+                    Este vehiculo aun no tiene ordenes de trabajo registradas.
+                  </p>
+                )}
 
-      {portal.vehicles.length === 0 ? (
+                <div className="mt-6 flex justify-end">
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/portal/vehicles/${vehicle.id}`}
+                  >
+                    Ver detalle
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {portal.pendingInspections.length > 0 ? (
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Casos en autoinspeccion
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold">
+              Ingresos pendientes de recepcion
+            </h2>
+            <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+              Aqui veras los vehiculos enviados por autoinspeccion aunque el taller aun no los haya
+              creado como orden de trabajo.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {portal.pendingInspections.map((inspection) => (
+              <Card className="rounded-2xl" key={inspection.id}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                      Autoinspeccion
+                    </p>
+                    <h2 className="mt-2 font-heading text-2xl font-semibold">
+                      {inspection.vehicleSnapshot?.make ?? "Vehiculo"}{" "}
+                      {inspection.vehicleSnapshot?.model ?? "ingresado"}
+                    </h2>
+                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                      {inspection.vehicleSnapshot?.plate ?? "Sin patente"} /{" "}
+                      {SELF_INSPECTION_STATUS_LABELS[inspection.status]}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-[rgba(37,99,235,0.16)] bg-[rgba(37,99,235,0.08)] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
+                    {SELF_INSPECTION_STATUS_LABELS[inspection.status]}
+                  </span>
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
+                      <span>Progreso de autoinspeccion</span>
+                      <span>{inspection.progressPercent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[rgba(37,99,235,0.10)]">
+                      <div
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#17345e_0%,#2563eb_100%)] transition-[width]"
+                        style={{ width: `${inspection.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-[color:var(--muted-strong)]">
+                    <p>
+                      <span className="font-semibold text-[color:var(--foreground)]">Ingreso:</span>{" "}
+                      {formatDate(inspection.createdAt)}
+                    </p>
+                    <p className="mt-1">
+                      <span className="font-semibold text-[color:var(--foreground)]">
+                        Riesgo:
+                      </span>{" "}
+                      {SELF_INSPECTION_RISK_LABELS[inspection.overallRiskLevel]}
+                    </p>
+                    <p className="mt-1">
+                      <span className="font-semibold text-[color:var(--foreground)]">
+                        Motivo:
+                      </span>{" "}
+                      {inspection.mainComplaint ?? "Autoinspeccion recibida por el taller"}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-6 text-sm text-[color:var(--muted)]">
+                  El taller ya recibio este ingreso. Cuando lo conviertan en vehiculo u orden de
+                  trabajo lo veras integrado en tu panel principal.
+                </p>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {portal.vehicles.length === 0 && portal.pendingInspections.length === 0 ? (
         <Card className="rounded-2xl text-center">
           <p className="text-[color:var(--muted-strong)]">
-            Aun no tienes vehiculos asociados en el portal.
+            Aun no tienes vehiculos ni ingresos asociados en el portal.
           </p>
         </Card>
       ) : null}
