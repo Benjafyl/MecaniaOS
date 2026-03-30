@@ -53,6 +53,7 @@ export default async function NewWorkOrderPage({ searchParams }: NewWorkOrderPag
           defaultVehicleId={vehicleId}
           vehicles={vehicles.map((vehicle) => ({
             id: vehicle.id,
+            clientId: vehicle.client.id,
             label: `${vehicle.client.fullName} / ${vehicle.make} ${vehicle.model} / ${vehicle.vin}`,
           }))}
         />
