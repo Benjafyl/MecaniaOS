@@ -19,7 +19,7 @@ export function LoginForm() {
         </label>
         <Input
           autoComplete="email"
-          className="min-h-12 rounded-2xl border-[rgba(15,23,42,0.08)] bg-[#f7f7f3] px-4 shadow-none focus:border-[#0f766e] focus:ring-[rgba(15,118,110,0.12)]"
+          className="min-h-12 rounded-2xl border-[rgba(95,127,168,0.18)] bg-[rgba(248,251,255,0.92)] px-4 shadow-none focus:border-[#2563eb] focus:ring-[rgba(37,99,235,0.14)]"
           defaultValue="admin@mecaniaos.local"
           id="email"
           name="email"
@@ -34,7 +34,7 @@ export function LoginForm() {
         </label>
         <Input
           autoComplete="current-password"
-          className="min-h-12 rounded-2xl border-[rgba(15,23,42,0.08)] bg-[#f7f7f3] px-4 shadow-none focus:border-[#0f766e] focus:ring-[rgba(15,118,110,0.12)]"
+          className="min-h-12 rounded-2xl border-[rgba(95,127,168,0.18)] bg-[rgba(248,251,255,0.92)] px-4 shadow-none focus:border-[#2563eb] focus:ring-[rgba(37,99,235,0.14)]"
           defaultValue="Admin1234!"
           id="password"
           name="password"
@@ -46,12 +46,12 @@ export function LoginForm() {
       <FormMessage className="rounded-2xl" message={state.error} />
 
       <SubmitButton
-        className="min-h-12 w-full rounded-2xl bg-[#0f172a] shadow-[0_18px_36px_rgba(15,23,42,0.18)] hover:bg-[#111827]"
+        className="min-h-12 w-full rounded-2xl bg-[linear-gradient(180deg,#17345e_0%,#14325a_100%)] shadow-[0_18px_36px_rgba(23,52,94,0.22)] hover:bg-[linear-gradient(180deg,#1b3e70_0%,#173a67_100%)]"
         label="Entrar"
         pendingLabel="Ingresando..."
       />
 
-      <p className="text-xs leading-5 text-[color:var(--muted)]">
+      <p className="text-xs leading-5 text-[#5f7fa8]">
         Usa una cuenta interna para acceder a recepcion, ordenes de trabajo y seguimiento del taller.
       </p>
     </form>
