@@ -17,17 +17,21 @@ export function LoginForm() {
         <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="email">
           Correo
         </label>
-        <Input defaultValue="admin@mecaniaos.local" id="email" name="email" type="email" />
+        <Input
+          className="bg-white/95"
+          defaultValue="admin@mecaniaos.local"
+          id="email"
+          name="email"
+          type="email"
+        />
       </div>
 
       <div className="space-y-2">
-        <label
-          className="text-sm font-medium text-[color:var(--muted-strong)]"
-          htmlFor="password"
-        >
+        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="password">
           Contrasena
         </label>
         <Input
+          className="bg-white/95"
           defaultValue="Admin1234!"
           id="password"
           name="password"
@@ -37,7 +41,11 @@ export function LoginForm() {
 
       <FormMessage message={state.error} />
 
-      <SubmitButton className="w-full" label="Entrar al taller" pendingLabel="Ingresando..." />
+      <SubmitButton
+        className="w-full"
+        label="Entrar al taller"
+        pendingLabel="Ingresando..."
+      />
     </form>
   );
 }

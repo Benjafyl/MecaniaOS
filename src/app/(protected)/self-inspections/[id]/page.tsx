@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { PublicLinkPanel } from "@/app/(protected)/self-inspections/public-link-panel";
@@ -35,6 +36,7 @@ export default async function SelfInspectionDetailPage({
   searchParams,
 }: SelfInspectionDetailPageProps) {
   const [{ id }, { token }] = await Promise.all([params, searchParams]);
+  const requestHeaders = await headers();
   const inspection = await getSelfInspectionById(id).catch((error) => {
     if (normalizeError(error).statusCode === 404) {
       notFound();
@@ -43,7 +45,12 @@ export default async function SelfInspectionDetailPage({
     throw error;
   });
   const latestReview = inspection.reviews[0];
-  const publicUrl = token ? `${env.APP_URL}/self-inspections/start/${token}` : null;
+  const forwardedHost = requestHeaders.get("x-forwarded-host");
+  const host = forwardedHost ?? requestHeaders.get("host");
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ?? (env.NODE_ENV === "production" ? "https" : "http");
+  const appOrigin = host ? `${protocol}://${host}` : env.APP_URL;
+  const publicUrl = token ? `${appOrigin}/self-inspections/start/${token}` : null;
 
   return (
     <div className="space-y-6">

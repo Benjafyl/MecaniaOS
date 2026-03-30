@@ -8,13 +8,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
-import { listClients } from "@/modules/clients/client.service";
 import {
   SELF_INSPECTION_RISK_OPTIONS,
   SELF_INSPECTION_STATUS_OPTIONS,
 } from "@/modules/self-inspections/self-inspection.constants";
 import { listSelfInspections } from "@/modules/self-inspections/self-inspection.service";
-import { listVehicles } from "@/modules/vehicles/vehicle.service";
 
 type SelfInspectionsPageProps = {
   searchParams: Promise<{
@@ -26,15 +24,11 @@ type SelfInspectionsPageProps = {
 
 export default async function SelfInspectionsPage({ searchParams }: SelfInspectionsPageProps) {
   const { q, status, risk } = await searchParams;
-  const [inspections, clients, vehicles] = await Promise.all([
-    listSelfInspections({
-      q,
-      status,
-      risk,
-    }),
-    listClients(),
-    listVehicles(),
-  ]);
+  const inspections = await listSelfInspections({
+    q,
+    status,
+    risk,
+  });
 
   return (
     <div className="space-y-6">
@@ -82,20 +76,12 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
         <Card className="rounded-[32px]">
           <h2 className="font-heading text-2xl font-semibold">Generar enlace seguro</h2>
           <p className="mt-2 text-sm text-[color:var(--muted)]">
-            Crea una autoinspeccion en borrador y entrega un enlace directo al cliente.
+            Crea una autoinspeccion en borrador y comparte un link listo para usar. El cliente se
+            identificara al abrirlo.
           </p>
 
           <div className="mt-5">
-            <InviteForm
-              clients={clients.map((client) => ({
-                id: client.id,
-                fullName: client.fullName,
-              }))}
-              vehicles={vehicles.map((vehicle) => ({
-                id: vehicle.id,
-                label: `${vehicle.client.fullName} / ${vehicle.make} ${vehicle.model} / ${vehicle.plate ?? "Sin patente"}`,
-              }))}
-            />
+            <InviteForm />
           </div>
         </Card>
 
