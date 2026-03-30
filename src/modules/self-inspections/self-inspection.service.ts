@@ -5,35 +5,43 @@ import {
   SelfInspectionReason,
   SelfInspectionRiskLevel,
   SelfInspectionStatus,
+  UserRole,
   VehicleFuelType,
   VehicleTransmissionType,
 } from "@prisma/client";
+import { hash } from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 
-import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
-import { prisma } from "@/lib/prisma";
 import {
-  SELF_INSPECTION_AUTOMATIC_ONLY_KEYS,
-  SELF_INSPECTION_MANUAL_ONLY_KEYS,
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
+import { getCurrentSession, signIn, signOut } from "@/modules/auth/auth.service";
+import {
   SELF_INSPECTION_NEXT_STEP_LABELS,
   SELF_INSPECTION_PHOTO_SLOTS,
   SELF_INSPECTION_PHOTO_TYPE_LABELS,
+  SELF_INSPECTION_PROBLEM_FREQUENCY_LABELS,
+  SELF_INSPECTION_PROBLEM_SINCE_LABELS,
+  SELF_INSPECTION_PROBLEM_TYPE_LABELS,
+  SELF_INSPECTION_PUBLIC_QUESTION_KEYS,
   SELF_INSPECTION_QUESTION_DEFINITIONS,
-  SELF_INSPECTION_REASON_LABELS,
   SELF_INSPECTION_REQUIRED_ANSWER_KEYS,
   SELF_INSPECTION_REQUIRED_PHOTO_TYPES,
   SELF_INSPECTION_RISK_LABELS,
   SELF_INSPECTION_SECTION_LABELS,
   SELF_INSPECTION_STATUS_LABELS,
+  type SelfInspectionProblemType,
 } from "@/modules/self-inspections/self-inspection.constants";
 import {
   createSelfInspectionInviteSchema,
+  publicSelfInspectionAccessSchema,
   reviewSelfInspectionSchema,
-  selfInspectionDamageStepSchema,
   selfInspectionFiltersSchema,
-  selfInspectionGeneralStepSchema,
-  selfInspectionHistoryStepSchema,
-  selfInspectionNotesStepSchema,
   selfInspectionPhotoUploadSchema,
   selfInspectionReasonStepSchema,
   selfInspectionVehicleStepSchema,
@@ -46,6 +54,7 @@ import {
   deleteInspectionPhotoFile,
   saveInspectionPhotoFile,
 } from "@/modules/self-inspections/self-inspection.storage";
+import { userRepository } from "@/modules/users/user.repository";
 
 type AnswerRecordInput = {
   section: string;
@@ -58,34 +67,16 @@ type AnswerRecordInput = {
 
 type AnswerMap = Record<string, unknown>;
 
-const AUTOMATIC_TRANSMISSIONS = new Set<VehicleTransmissionType>([
-  VehicleTransmissionType.AUTOMATIC,
-  VehicleTransmissionType.CVT,
-  VehicleTransmissionType.DUAL_CLUTCH,
-]);
+type PublicInspectionEntity = NonNullable<
+  Awaited<ReturnType<typeof selfInspectionRepository.findByAccessTokenHash>>
+>;
+type CustomerSession = NonNullable<Awaited<ReturnType<typeof getCurrentSession>>>;
 
-const CUSTOMER_NOTE_FIELDS = [
-  {
-    fieldKey: "additionalProblemContext",
-    noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
-  },
-  {
-    fieldKey: "triggerConditions",
-    noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
-  },
-  {
-    fieldKey: "importantBackground",
-    noteType: SelfInspectionNoteType.CUSTOMER_BACKGROUND,
-  },
-  {
-    fieldKey: "workshopInstructions",
-    noteType: SelfInspectionNoteType.CUSTOMER_INSTRUCTION,
-  },
-  {
-    fieldKey: "customerAvailability",
-    noteType: SelfInspectionNoteType.CUSTOMER_AVAILABILITY,
-  },
-] as const;
+const FINAL_COMMENT_FIELD_KEY = "finalComment";
+const FINAL_COMMENT_NOTE_TYPE = SelfInspectionNoteType.CUSTOMER_OBSERVATION;
+const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SI_PENDING";
+const PENDING_SELF_INSPECTION_CLIENT_NAME = "Cliente por identificar";
+const PENDING_SELF_INSPECTION_EMAIL_DOMAIN = "self-inspection.pending.mecaniaos.local";
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
@@ -100,6 +91,31 @@ function createAccessToken() {
 
 function hashAccessToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function createPendingClientDraft() {
+  const suffix = randomBytes(10).toString("hex");
+
+  return {
+    fullName: PENDING_SELF_INSPECTION_CLIENT_NAME,
+    phone: "",
+    email: `pending+self-inspection-${suffix}@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`,
+    localIdentifier: `${PENDING_SELF_INSPECTION_CLIENT_PREFIX}:${suffix}`,
+  };
+}
+
+function isPendingInspectionCustomer(customer: {
+  email: string;
+  localIdentifier?: string | null;
+}) {
+  return (
+    customer.localIdentifier?.startsWith(PENDING_SELF_INSPECTION_CLIENT_PREFIX) === true ||
+    normalizeEmail(customer.email).endsWith(`@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`)
+  );
 }
 
 function getHigherRisk(
@@ -137,10 +153,6 @@ function parseNoteContent(value: string) {
   };
 }
 
-function isAutomaticTransmission(value: VehicleTransmissionType) {
-  return AUTOMATIC_TRANSMISSIONS.has(value);
-}
-
 function getCompletionPercent(lastCompletedStep: number, status: SelfInspectionStatus) {
   if (
     status === SelfInspectionStatus.SUBMITTED ||
@@ -151,7 +163,11 @@ function getCompletionPercent(lastCompletedStep: number, status: SelfInspectionS
     return 100;
   }
 
-  return Math.min(95, Math.max(10, Math.round(((lastCompletedStep - 1) / 8) * 100)));
+  if (lastCompletedStep <= 0) {
+    return 0;
+  }
+
+  return Math.min(95, Math.max(15, Math.round((lastCompletedStep / 3) * 100)));
 }
 
 function mapAnswersToRecord(answers: Array<{ questionKey: string; answerValue: Prisma.JsonValue }>) {
@@ -161,211 +177,138 @@ function mapAnswersToRecord(answers: Array<{ questionKey: string; answerValue: P
   }, {});
 }
 
-function parseCustomerNotes(
-  notes: Array<{ noteType: SelfInspectionNoteType; content: string }>,
+function getProblemTypeLabel(problemType: unknown) {
+  if (typeof problemType !== "string") {
+    return null;
+  }
+
+  return SELF_INSPECTION_PROBLEM_TYPE_LABELS[
+    problemType as keyof typeof SELF_INSPECTION_PROBLEM_TYPE_LABELS
+  ] ?? null;
+}
+
+function mapLegacyReasonToProblemType(reason: SelfInspectionReason | null | undefined) {
+  switch (reason) {
+    case SelfInspectionReason.STRANGE_NOISE:
+      return "STRANGE_NOISE";
+    case SelfInspectionReason.DASHBOARD_WARNING_LIGHTS:
+      return "ELECTRICAL_BATTERY";
+    case SelfInspectionReason.COLLISION_DAMAGE:
+    case SelfInspectionReason.BODY_PAINT_DAMAGE:
+      return "OTHER";
+    case SelfInspectionReason.MECHANICAL_FAILURE:
+      return "MOTOR";
+    default:
+      return "";
+  }
+}
+
+function mapProblemTypeToInspectionReason(problemType: SelfInspectionProblemType) {
+  switch (problemType) {
+    case "STRANGE_NOISE":
+      return {
+        inspectionReason: SelfInspectionReason.STRANGE_NOISE,
+        inspectionReasonOther: null,
+      };
+    case "ELECTRICAL_BATTERY":
+      return {
+        inspectionReason: SelfInspectionReason.DASHBOARD_WARNING_LIGHTS,
+        inspectionReasonOther: "Electrico / bateria",
+      };
+    case "AC_HEATING":
+      return {
+        inspectionReason: SelfInspectionReason.OTHER,
+        inspectionReasonOther: SELF_INSPECTION_PROBLEM_TYPE_LABELS[problemType],
+      };
+    case "OTHER":
+      return {
+        inspectionReason: SelfInspectionReason.OTHER,
+        inspectionReasonOther: "Otro",
+      };
+    default:
+      return {
+        inspectionReason: SelfInspectionReason.MECHANICAL_FAILURE,
+        inspectionReasonOther: SELF_INSPECTION_PROBLEM_TYPE_LABELS[problemType],
+      };
+  }
+}
+
+function buildContactSnapshot(
+  customer: {
+    fullName: string;
+    phone: string;
+    email: string;
+    localIdentifier?: string | null;
+  },
+  answersMap: AnswerMap,
 ) {
+  const isPendingCustomer = isPendingInspectionCustomer(customer);
+
+  return {
+    fullName: String(
+      answersMap.customer_full_name ??
+        (isPendingCustomer ? PENDING_SELF_INSPECTION_CLIENT_NAME : customer.fullName ?? ""),
+    ),
+    phone: String(answersMap.customer_phone ?? (isPendingCustomer ? "" : customer.phone ?? "")),
+    email: String(answersMap.customer_email ?? (isPendingCustomer ? "" : customer.email ?? "")),
+  };
+}
+
+function buildCustomerVehicleStepDraft(inspection: PublicInspectionEntity, answersMap: AnswerMap) {
+  const contact = buildContactSnapshot(inspection.customer, answersMap);
+  const snapshot = inspection.vehicleSnapshot;
+  const vehicle = inspection.vehicle;
+
+  return {
+    fullName: contact.fullName,
+    phone: contact.phone,
+    email: contact.email,
+    plate: String(answersMap.vehicle_plate ?? snapshot?.plate ?? vehicle?.plate ?? ""),
+    make: String(answersMap.vehicle_make ?? snapshot?.make ?? vehicle?.make ?? ""),
+    model: String(answersMap.vehicle_model ?? snapshot?.model ?? vehicle?.model ?? ""),
+    year: String(answersMap.vehicle_year ?? snapshot?.year ?? vehicle?.year ?? ""),
+    mileage: String(answersMap.vehicle_mileage ?? snapshot?.mileage ?? vehicle?.mileage ?? ""),
+  };
+}
+
+function buildProblemStepDraft(inspection: PublicInspectionEntity, answersMap: AnswerMap) {
+  return {
+    problemType: String(
+      answersMap.reason_problem_type ?? mapLegacyReasonToProblemType(inspection.inspectionReason),
+    ),
+    vehicleStarts:
+      typeof answersMap.vehicle_starts === "boolean"
+        ? answersMap.vehicle_starts
+        : inspection.vehicleSnapshot?.starts,
+    canDrive:
+      typeof answersMap.reason_can_drive === "boolean"
+        ? answersMap.reason_can_drive
+        : (inspection.canDrive ?? undefined),
+    warningLights:
+      typeof answersMap.reason_warning_lights === "boolean"
+        ? answersMap.reason_warning_lights
+        : undefined,
+    problemSince: String(answersMap.reason_problem_since ?? ""),
+    issueFrequency: String(answersMap.reason_issue_frequency ?? ""),
+    description: String(answersMap.reason_problem_description ?? inspection.mainComplaint ?? ""),
+  };
+}
+
+function parseCustomerNotes(notes: Array<{ noteType: SelfInspectionNoteType; content: string }>) {
   return notes.reduce(
     (accumulator, note) => {
       const parsed = parseNoteContent(note.content);
 
-      if (parsed.fieldKey) {
-        accumulator[parsed.fieldKey] = parsed.content;
+      if (parsed.fieldKey === FINAL_COMMENT_FIELD_KEY) {
+        accumulator.finalComment = parsed.content;
       }
 
       return accumulator;
     },
     {
-      additionalProblemContext: "",
-      triggerConditions: "",
-      importantBackground: "",
-      workshopInstructions: "",
-      customerAvailability: "",
-    } as Record<string, string>,
+      finalComment: "",
+    },
   );
-}
-
-function getVehicleSnapshotFromVehicle(vehicle?: {
-  id: string;
-  plate: string | null;
-  vin: string;
-  make: string;
-  model: string;
-  year: number;
-  color: string | null;
-  mileage: number | null;
-  fuelType: VehicleFuelType | null;
-  transmission: VehicleTransmissionType | null;
-}) {
-  if (!vehicle) {
-    return null;
-  }
-
-  return {
-    vehicleId: vehicle.id,
-    plate: vehicle.plate ?? "",
-    vin: vehicle.vin ?? "",
-    make: vehicle.make,
-    model: vehicle.model,
-    year: vehicle.year,
-    color: vehicle.color ?? "",
-    mileage: vehicle.mileage ?? 0,
-    fuelType: vehicle.fuelType ?? undefined,
-    transmission: vehicle.transmission ?? undefined,
-    starts: true,
-  };
-}
-
-function buildVehicleStepDraft(
-  inspection: NonNullable<Awaited<ReturnType<typeof selfInspectionRepository.findByAccessTokenHash>>>,
-) {
-  const snapshot = inspection.vehicleSnapshot;
-  const vehicle = inspection.vehicle;
-  const fallback = getVehicleSnapshotFromVehicle(vehicle ?? undefined);
-
-  return {
-    vehicleId: inspection.vehicleId ?? "",
-    plate: snapshot?.plate ?? fallback?.plate ?? "",
-    vin: snapshot?.vin ?? fallback?.vin ?? "",
-    make: snapshot?.make ?? fallback?.make ?? "",
-    model: snapshot?.model ?? fallback?.model ?? "",
-    year: snapshot?.year ?? fallback?.year ?? "",
-    color: snapshot?.color ?? fallback?.color ?? "",
-    mileage: snapshot?.mileage ?? fallback?.mileage ?? "",
-    fuelType: snapshot?.fuelType ?? fallback?.fuelType ?? "",
-    transmission: snapshot?.transmission ?? fallback?.transmission ?? "",
-    starts: snapshot?.starts ?? true,
-  };
-}
-
-function buildReasonStepDraft(
-  inspection: NonNullable<Awaited<ReturnType<typeof selfInspectionRepository.findByAccessTokenHash>>>,
-  answersMap: AnswerMap,
-) {
-  return {
-    inspectionReason: inspection.inspectionReason ?? "",
-    inspectionReasonOther: inspection.inspectionReasonOther ?? "",
-    mainComplaint: inspection.mainComplaint ?? "",
-    problemSince: String(answersMap.reason_problem_since ?? ""),
-    issueFrequency: String(answersMap.reason_issue_frequency ?? ""),
-    canDrive: inspection.canDrive ?? true,
-    worsenedRecently: answersMap.reason_worsened_recently ?? undefined,
-  };
-}
-
-function buildGeneralStepDraft(answersMap: AnswerMap) {
-  return {
-    operational: {
-      startBehavior: String(answersMap.operational_start_behavior ?? ""),
-      unusualNoises: answersMap.operational_unusual_noises ?? undefined,
-      vibrations: answersMap.operational_vibrations ?? undefined,
-      shutsOffByItself: answersMap.operational_shuts_off ?? undefined,
-      powerLoss: answersMap.operational_power_loss ?? undefined,
-      unusualSmoke: answersMap.operational_unusual_smoke ?? undefined,
-      strangeSmell: answersMap.operational_strange_smell ?? undefined,
-      dashboardWarningLights: answersMap.operational_dashboard_warning_lights ?? undefined,
-      dashboardWarningDetails: String(answersMap.operational_dashboard_warning_details ?? ""),
-    },
-    engine: {
-      knockingNoises: answersMap.engine_knocking_noises ?? undefined,
-      powerLossUnderLoad: answersMap.engine_power_loss_under_load ?? undefined,
-      idleUnstable: answersMap.engine_idle_unstable ?? undefined,
-      overheating: answersMap.engine_overheating ?? undefined,
-      fluidLeaks: answersMap.engine_fluid_leaks ?? undefined,
-      fluidLeakDetails: String(answersMap.engine_fluid_leak_details ?? ""),
-      checkEngineLight: answersMap.engine_check_engine_light ?? undefined,
-      coldStartProblems: answersMap.engine_cold_start_problems ?? undefined,
-      highFuelConsumption: answersMap.engine_high_fuel_consumption ?? undefined,
-    },
-    brakes: {
-      workingProperly: answersMap.brakes_working_properly ?? undefined,
-      noise: answersMap.brakes_noise ?? undefined,
-      pedalFeel: String(answersMap.brakes_pedal_feel ?? ""),
-      pullsSide: answersMap.brakes_pulls_side ?? undefined,
-      vibration: answersMap.brakes_vibration ?? undefined,
-      absWarning: answersMap.brakes_abs_warning ?? undefined,
-    },
-    steeringSuspension: {
-      steeringHard: answersMap.steering_hard ?? undefined,
-      steeringVibration: answersMap.steering_vibration ?? undefined,
-      vehiclePullsSide: answersMap.steering_pulls_side ?? undefined,
-      suspensionKnocks: answersMap.suspension_knocks ?? undefined,
-      excessiveBounce: answersMap.suspension_excessive_bounce ?? undefined,
-      unevenRideHeight: answersMap.suspension_uneven_height ?? undefined,
-    },
-    automaticTransmission: {
-      shiftSmooth: answersMap.transmission_auto_shift_smooth ?? undefined,
-      jerks: answersMap.transmission_auto_jerks ?? undefined,
-      delay: answersMap.transmission_auto_delay ?? undefined,
-      shiftNoise: answersMap.transmission_auto_shift_noise ?? undefined,
-    },
-    manualTransmission: {
-      hardGears: answersMap.transmission_manual_hard_gears ?? undefined,
-      clutchSlipping: answersMap.transmission_manual_clutch_slipping ?? undefined,
-      clutchPedalPosition: String(answersMap.transmission_manual_clutch_pedal_position ?? ""),
-      clutchNoise: answersMap.transmission_manual_clutch_noise ?? undefined,
-    },
-    tires: {
-      worn: answersMap.tires_worn ?? undefined,
-      wearPattern: String(answersMap.tires_wear_pattern ?? ""),
-      lowPressureOrPuncture: answersMap.tires_low_pressure_or_puncture ?? undefined,
-      damagedRims: answersMap.tires_damaged_rims ?? undefined,
-      speedVibration: answersMap.tires_speed_vibration ?? undefined,
-    },
-    electrical: {
-      frontLights: answersMap.electrical_front_lights ?? undefined,
-      rearLights: answersMap.electrical_rear_lights ?? undefined,
-      turnSignals: answersMap.electrical_turn_signals ?? undefined,
-      horn: answersMap.electrical_horn ?? undefined,
-      climateControl: answersMap.electrical_climate_control ?? undefined,
-      centralLocking: answersMap.electrical_central_locking ?? undefined,
-      windows: answersMap.electrical_windows ?? undefined,
-      batteryFailedRecently: answersMap.electrical_battery_failed_recently ?? undefined,
-    },
-    interior: {
-      visibleDamage: answersMap.interior_visible_damage ?? undefined,
-      instrumentPanelWorking: answersMap.interior_instrument_panel_working ?? undefined,
-      multimediaWorking: String(answersMap.interior_multimedia_working ?? ""),
-      waterLeaks: answersMap.interior_water_leaks ?? undefined,
-      cabinStrangeSmells: answersMap.interior_cabin_strange_smells ?? undefined,
-    },
-    exterior: {
-      scratches: answersMap.exterior_scratches ?? undefined,
-      dents: answersMap.exterior_dents ?? undefined,
-      misalignedPanels: answersMap.exterior_misaligned_panels ?? undefined,
-      damagedGlassOrLights: answersMap.exterior_damaged_glass_or_lights ?? undefined,
-      brokenTrim: answersMap.exterior_broken_trim ?? undefined,
-      damageAge: String(answersMap.exterior_damage_age ?? ""),
-    },
-  };
-}
-
-function buildDamageStepDraft(answersMap: AnswerMap) {
-  return {
-    recentCollision: answersMap.damage_recent_collision ?? undefined,
-    affectedZone: String(answersMap.damage_affected_zone ?? ""),
-    affectsFunctionality: answersMap.damage_affects_functionality ?? undefined,
-    structuralImpact: answersMap.damage_structural_impact ?? undefined,
-    exposureEvents: Array.isArray(answersMap.damage_exposure_events)
-      ? answersMap.damage_exposure_events
-      : [],
-    insuranceOrPoliceReport: answersMap.damage_insurance_or_police_report ?? undefined,
-    wantsInsuranceEvaluation: answersMap.damage_wants_insurance_evaluation ?? undefined,
-  };
-}
-
-function buildHistoryStepDraft(answersMap: AnswerMap) {
-  return {
-    lastMaintenanceAt: String(answersMap.history_last_maintenance_at ?? ""),
-    lastMaintenancePerformed: String(answersMap.history_last_maintenance_performed ?? ""),
-    brakesReplacedRecently: answersMap.history_brakes_replaced_recently ?? undefined,
-    batteryReplacedRecently: answersMap.history_battery_replaced_recently ?? undefined,
-    tiresReplacedRecently: answersMap.history_tires_replaced_recently ?? undefined,
-    oilAndFiltersChanged: answersMap.history_oil_and_filters_changed ?? undefined,
-    pendingRecentRepairs: answersMap.history_pending_recent_repairs ?? undefined,
-    checkedByAnotherWorkshop: answersMap.history_checked_by_another_workshop ?? undefined,
-    previousQuoteOrDiagnosis: answersMap.history_previous_quote_or_diagnosis ?? undefined,
-    previousDiagnosisDetails: String(answersMap.history_previous_diagnosis_details ?? ""),
-  };
 }
 
 function resolveAnswerSeverity(questionKey: string, answerValue: unknown) {
@@ -374,28 +317,24 @@ function resolveAnswerSeverity(questionKey: string, answerValue: unknown) {
       return answerValue === false ? SelfInspectionRiskLevel.CRITICAL : null;
     case "reason_can_drive":
       return answerValue === false ? SelfInspectionRiskLevel.CRITICAL : null;
-    case "operational_start_behavior":
-      return answerValue === "NO_START" ? SelfInspectionRiskLevel.CRITICAL : null;
-    case "operational_unusual_smoke":
-    case "engine_overheating":
-    case "damage_structural_impact":
-      return answerValue === true ? SelfInspectionRiskLevel.CRITICAL : null;
-    case "engine_fluid_leaks":
-    case "engine_check_engine_light":
-    case "brakes_abs_warning":
-    case "steering_hard":
-    case "damage_recent_collision":
-    case "damage_affects_functionality":
+    case "reason_warning_lights":
       return answerValue === true ? SelfInspectionRiskLevel.HIGH : null;
-    case "brakes_working_properly":
-      return answerValue === false ? SelfInspectionRiskLevel.CRITICAL : null;
-    case "operational_dashboard_warning_lights":
-      return answerValue === true ? SelfInspectionRiskLevel.HIGH : null;
-    case "operational_vibrations":
-    case "steering_vibration":
-    case "steering_pulls_side":
-    case "tires_speed_vibration":
-      return answerValue === true ? SelfInspectionRiskLevel.HIGH : null;
+    case "reason_problem_type":
+      switch (answerValue) {
+        case "BRAKES":
+        case "STEERING_SUSPENSION":
+        case "ELECTRICAL_BATTERY":
+        case "TRANSMISSION_CLUTCH":
+        case "LEAK":
+          return SelfInspectionRiskLevel.HIGH;
+        case "MOTOR":
+        case "AC_HEATING":
+        case "STRANGE_NOISE":
+        case "OTHER":
+          return SelfInspectionRiskLevel.MEDIUM;
+        default:
+          return null;
+      }
     default:
       return null;
   }
@@ -421,40 +360,51 @@ function buildAnswerRecord(questionKey: string, answerValue: Prisma.InputJsonVal
 function createCriticalFindings(input: {
   snapshot: {
     starts: boolean;
-    transmission: VehicleTransmissionType;
   } | null;
   canDrive: boolean | null;
   answersMap: AnswerMap;
 }) {
   const findings: Array<{ label: string; severity: SelfInspectionRiskLevel }> = [];
+  const starts =
+    typeof input.answersMap.vehicle_starts === "boolean"
+      ? input.answersMap.vehicle_starts
+      : input.snapshot?.starts;
 
-  if (input.snapshot?.starts === false) {
+  if (starts === false) {
     findings.push({ label: "Vehiculo no enciende", severity: SelfInspectionRiskLevel.CRITICAL });
   }
 
   if (input.canDrive === false) {
     findings.push({
-      label: "Vehiculo no circulable",
+      label: "Vehiculo no se puede conducir normalmente",
       severity: SelfInspectionRiskLevel.CRITICAL,
     });
   }
 
-  const flaggedQuestions = Object.entries(input.answersMap)
-    .map(([questionKey, answerValue]) => {
-      const severity = resolveAnswerSeverity(questionKey, answerValue);
+  if (input.answersMap.reason_warning_lights === true) {
+    findings.push({
+      label: "Luces de advertencia encendidas en tablero",
+      severity: SelfInspectionRiskLevel.HIGH,
+    });
+  }
 
-      if (!severity) {
-        return null;
-      }
+  const problemTypeLabel = getProblemTypeLabel(input.answersMap.reason_problem_type);
+  const problemTypeSeverity = resolveAnswerSeverity(
+    "reason_problem_type",
+    input.answersMap.reason_problem_type,
+  );
 
-      return {
-        label: SELF_INSPECTION_QUESTION_DEFINITIONS[questionKey]?.label ?? questionKey,
-        severity,
-      };
-    })
-    .filter(Boolean) as Array<{ label: string; severity: SelfInspectionRiskLevel }>;
+  if (problemTypeLabel && problemTypeSeverity) {
+    findings.push({
+      label: `Problema reportado: ${problemTypeLabel}`,
+      severity: problemTypeSeverity,
+    });
+  }
 
-  return [...findings, ...flaggedQuestions];
+  return findings.filter(
+    (finding, index, collection) =>
+      collection.findIndex((candidate) => candidate.label === finding.label) === index,
+  );
 }
 
 function calculateRiskLevel(input: {
@@ -466,7 +416,11 @@ function calculateRiskLevel(input: {
 }) {
   let overallRisk: SelfInspectionRiskLevel = SelfInspectionRiskLevel.LOW;
 
-  if (input.snapshot?.starts === false || input.canDrive === false) {
+  if (
+    input.snapshot?.starts === false ||
+    input.answersMap.vehicle_starts === false ||
+    input.canDrive === false
+  ) {
     overallRisk = SelfInspectionRiskLevel.CRITICAL;
   }
 
@@ -478,63 +432,145 @@ function calculateRiskLevel(input: {
 }
 
 function buildSummary(input: {
-  customerName: string;
+  contact: {
+    fullName: string;
+    phone: string;
+    email: string;
+  };
   snapshot: {
     plate: string | null;
     make: string;
     model: string;
+    year: number;
     mileage: number;
     starts: boolean;
-    transmission: VehicleTransmissionType;
   } | null;
-  inspectionReason: string | null;
-  mainComplaint: string | null;
   canDrive: boolean | null;
   overallRiskLevel: SelfInspectionRiskLevel;
   answersMap: AnswerMap;
   photoCount: number;
+  finalComment?: string;
 }) {
-  const findings = createCriticalFindings({
-    snapshot: input.snapshot
-      ? {
-          starts: input.snapshot.starts,
-          transmission: input.snapshot.transmission,
-        }
-      : null,
-    canDrive: input.canDrive,
-    answersMap: input.answersMap,
-  })
-    .slice(0, 4)
-    .map((entry) => entry.label.toLowerCase());
-
+  const problemTypeLabel =
+    getProblemTypeLabel(input.answersMap.reason_problem_type) ?? "otro problema";
+  const problemSince =
+    SELF_INSPECTION_PROBLEM_SINCE_LABELS[
+      String(input.answersMap.reason_problem_since ?? "") as keyof typeof SELF_INSPECTION_PROBLEM_SINCE_LABELS
+    ] ?? null;
+  const frequency =
+    SELF_INSPECTION_PROBLEM_FREQUENCY_LABELS[
+      String(input.answersMap.reason_issue_frequency ?? "") as keyof typeof SELF_INSPECTION_PROBLEM_FREQUENCY_LABELS
+    ] ?? null;
+  const description = String(input.answersMap.reason_problem_description ?? "").trim();
   const segments = [
-    `${input.customerName} reporta ${input.mainComplaint?.trim() || "una revision pendiente"}.`,
+    `${input.contact.fullName} reporta ${problemTypeLabel.toLowerCase()}${
+      description ? `: ${description}.` : "."
+    }`,
     input.snapshot
-      ? `Vehiculo ${input.snapshot.make} ${input.snapshot.model} ${input.snapshot.plate ?? "sin patente"} con ${input.snapshot.mileage.toLocaleString("es-CL")} km.`
-      : "Vehiculo sin snapshot completo todavia.",
-    input.inspectionReason
-      ? `Motivo principal: ${input.inspectionReason.toLowerCase()}.`
-      : "Motivo principal sin definir.",
+      ? `Vehiculo ${input.snapshot.make} ${input.snapshot.model} ${
+          input.snapshot.plate ?? "sin patente"
+        }, ano ${input.snapshot.year}, ${input.snapshot.mileage.toLocaleString("es-CL")} km aprox.`
+      : "Vehiculo sin datos completos todavia.",
+    `Contacto: ${input.contact.phone} / ${input.contact.email}.`,
+    input.snapshot?.starts === false || input.answersMap.vehicle_starts === false
+      ? "El cliente indica que el vehiculo no enciende."
+      : "El cliente indica que el vehiculo enciende.",
     input.canDrive === false
-      ? "El cliente informa que el vehiculo no puede circular."
-      : "El cliente indica que el vehiculo aun puede circular.",
-    findings.length > 0
-      ? `Alertas detectadas: ${findings.join(", ")}.`
-      : "No hay alertas criticas reportadas en este momento.",
-    `Riesgo preliminar ${SELF_INSPECTION_RISK_LABELS[input.overallRiskLevel].toLowerCase()} con ${input.photoCount} fotos cargadas.`,
+      ? "No se puede conducir normalmente."
+      : "El cliente indica que aun se puede conducir.",
+    input.answersMap.reason_warning_lights === true
+      ? "Hay luces de advertencia encendidas en el tablero."
+      : "No reporta luces de advertencia encendidas.",
+    problemSince ? `El problema comenzo ${problemSince.toLowerCase()}.` : null,
+    frequency ? `El comportamiento es ${frequency.toLowerCase()}.` : null,
+    `Adjunta ${input.photoCount} ${input.photoCount === 1 ? "imagen" : "imagenes"}. Riesgo preliminar ${SELF_INSPECTION_RISK_LABELS[input.overallRiskLevel].toLowerCase()}.`,
+    input.finalComment?.trim() ? `Comentario final: ${input.finalComment.trim()}.` : null,
   ];
 
-  return segments.join(" ");
+  return segments.filter(Boolean).join(" ");
 }
 
-async function assertInspectionCustomerEditableByToken(token: string) {
-  const inspection = await getPublicSelfInspectionEntity(token);
-
-  if (!isCustomerEditableStatus(inspection.status)) {
-    throw new ConflictError("La autoinspeccion ya fue enviada y no admite mas cambios");
+function canSessionAccessInspection(
+  session: Awaited<ReturnType<typeof getCurrentSession>>,
+  inspection: PublicInspectionEntity,
+) {
+  if (!session) {
+    return false;
   }
 
-  return inspection;
+  if (session.user.role !== UserRole.CUSTOMER) {
+    return false;
+  }
+
+  if (isPendingInspectionCustomer(inspection.customer)) {
+    return true;
+  }
+
+  return normalizeEmail(session.user.email) === normalizeEmail(inspection.customer.email);
+}
+
+async function claimPendingInspectionCustomer(
+  inspection: PublicInspectionEntity,
+  session: CustomerSession,
+) {
+  if (!isPendingInspectionCustomer(inspection.customer)) {
+    return inspection;
+  }
+
+  const normalizedEmail = normalizeEmail(session.user.email);
+
+  await prisma.$transaction(async (tx) => {
+    const currentInspection = await tx.selfInspection.findUnique({
+      where: {
+        id: inspection.id,
+      },
+      include: {
+        customer: true,
+      },
+    });
+
+    if (!currentInspection || !isPendingInspectionCustomer(currentInspection.customer)) {
+      return;
+    }
+
+    const existingCustomer = await tx.client.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    if (existingCustomer) {
+      await tx.selfInspection.update({
+        where: {
+          id: inspection.id,
+        },
+        data: {
+          customerId: existingCustomer.id,
+        },
+      });
+
+      return;
+    }
+
+    await tx.client.update({
+      where: {
+        id: currentInspection.customer.id,
+      },
+      data: {
+        fullName: session.user.name.trim() || PENDING_SELF_INSPECTION_CLIENT_NAME,
+        email: normalizedEmail,
+        localIdentifier: null,
+      },
+    });
+  });
+
+  return getPublicSelfInspectionEntityById(inspection.id);
 }
 
 async function getPublicSelfInspectionEntity(token: string) {
@@ -551,224 +587,53 @@ async function getPublicSelfInspectionEntity(token: string) {
   return inspection;
 }
 
-async function updateInspectionDerivedState(selfInspectionId: string, input?: { lastCompletedStep?: number }) {
-  const inspection = await selfInspectionRepository.findSummaryById(selfInspectionId);
+async function getPublicSelfInspectionEntityById(id: string) {
+  const inspection = await selfInspectionRepository.findPublicById(id);
 
   if (!inspection) {
     throw new NotFoundError("Autoinspeccion no encontrada");
   }
 
-  const answersMap = mapAnswersToRecord(inspection.answers);
-  const overallRiskLevel = calculateRiskLevel({
-    snapshot: inspection.vehicleSnapshot
-      ? {
-          starts: inspection.vehicleSnapshot.starts,
-        }
-      : null,
-    canDrive: inspection.canDrive,
-    answersMap,
-  });
-  const summaryGenerated = buildSummary({
-    customerName: inspection.customer.fullName,
-    snapshot: inspection.vehicleSnapshot
-      ? {
-          plate: inspection.vehicleSnapshot.plate,
-          make: inspection.vehicleSnapshot.make,
-          model: inspection.vehicleSnapshot.model,
-          mileage: inspection.vehicleSnapshot.mileage,
-          starts: inspection.vehicleSnapshot.starts,
-          transmission: inspection.vehicleSnapshot.transmission,
-        }
-      : null,
-    inspectionReason: inspection.inspectionReason
-      ? SELF_INSPECTION_REASON_LABELS[inspection.inspectionReason]
-      : null,
-    mainComplaint: inspection.mainComplaint,
-    canDrive: inspection.canDrive,
-    overallRiskLevel,
-    answersMap,
-    photoCount: inspection.photos.length,
-  });
-  const lastCompletedStep = Math.max(input?.lastCompletedStep ?? inspection.lastCompletedStep, inspection.lastCompletedStep);
-  const nextStatus =
-    inspection.status === SelfInspectionStatus.DRAFT &&
-    (input?.lastCompletedStep ?? inspection.lastCompletedStep) > 1
-      ? SelfInspectionStatus.IN_PROGRESS
-      : inspection.status;
-
-  await prisma.selfInspection.update({
-    where: {
-      id: selfInspectionId,
-    },
-    data: {
-      status: nextStatus,
-      overallRiskLevel,
-      summaryGenerated,
-      lastCompletedStep,
-      completionPercent: getCompletionPercent(lastCompletedStep, nextStatus),
-    },
-  });
+  return inspection;
 }
 
-export async function listSelfInspections(input?: unknown) {
-  const filters = selfInspectionFiltersSchema.parse(input ?? {});
-  const inspections = await selfInspectionRepository.list({
-    search: filters.q?.trim(),
-    status: filters.status,
-    risk: filters.risk,
-  });
-
-  return inspections.map((inspection) => {
-    const answersMap = mapAnswersToRecord(inspection.answers);
-    const criticalFindings = createCriticalFindings({
-      snapshot: inspection.vehicleSnapshot
-        ? {
-            starts: inspection.vehicleSnapshot.starts,
-            transmission: inspection.vehicleSnapshot.transmission,
-          }
-        : null,
-      canDrive: inspection.canDrive,
-      answersMap,
-    });
-
-    return {
-      ...inspection,
-      criticalFindings,
-    };
-  });
-}
-
-export async function getSelfInspectionById(id: string) {
-  const inspection = await selfInspectionRepository.findById(id);
-
-  if (!inspection) {
-    throw new NotFoundError("Autoinspeccion no encontrada");
-  }
-
-  const answersMap = mapAnswersToRecord(inspection.answers);
-  const groupedAnswers = Object.entries(SELF_INSPECTION_SECTION_LABELS).map(([sectionKey, sectionLabel]) => ({
-    key: sectionKey,
-    label: sectionLabel,
-    answers: inspection.answers.filter((answer) => answer.section === sectionKey),
-  }));
-  const criticalFindings = createCriticalFindings({
-    snapshot: inspection.vehicleSnapshot
-      ? {
-          starts: inspection.vehicleSnapshot.starts,
-          transmission: inspection.vehicleSnapshot.transmission,
-        }
-      : null,
-    canDrive: inspection.canDrive,
-    answersMap,
-  });
-  const missingRequiredPhotoTypes = SELF_INSPECTION_REQUIRED_PHOTO_TYPES.filter(
-    (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
-  );
-
-  return {
-    ...inspection,
-    groupedAnswers,
-    criticalFindings,
-    missingRequiredPhotoTypes,
-  };
-}
-
-export async function createSelfInspectionInvite(input: unknown) {
-  const data = createSelfInspectionInviteSchema.parse(input) as CreateSelfInspectionInviteInput;
-  const customer = await prisma.client.findUnique({
-    where: { id: data.customerId },
-    include: {
-      vehicles: true,
-    },
-  });
-
-  if (!customer) {
-    throw new NotFoundError("Cliente no encontrado");
-  }
-
-  let vehicle = data.vehicleId
-    ? await selfInspectionRepository.findVehicleForCustomer(data.customerId, data.vehicleId)
-    : null;
-
-  if (data.vehicleId && !vehicle) {
-    throw new ConflictError("El vehiculo no pertenece al cliente seleccionado");
-  }
-
-  const rawToken = createAccessToken();
-  const accessTokenHash = hashAccessToken(rawToken);
-  const accessTokenExpiresAt = new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000);
-
-  const created = await prisma.$transaction(async (tx) => {
-    const inspection = await tx.selfInspection.create({
-      data: {
-        customerId: data.customerId,
-        vehicleId: vehicle?.id,
-        sourceChannel: data.sourceChannel,
-        accessTokenHash,
-        accessTokenExpiresAt,
-        status: SelfInspectionStatus.DRAFT,
-        lastCompletedStep: 1,
-        completionPercent: 10,
-        vehicleSnapshot: vehicle
-          ? {
-              create: {
-                plate: vehicle.plate,
-                vin: vehicle.vin,
-                make: vehicle.make,
-                model: vehicle.model,
-                year: vehicle.year,
-                color: vehicle.color,
-                mileage: vehicle.mileage ?? 0,
-                fuelType: vehicle.fuelType ?? VehicleFuelType.GASOLINE,
-                transmission: vehicle.transmission ?? VehicleTransmissionType.MANUAL,
-                starts: true,
-              },
-            }
-          : undefined,
-      },
-    });
-
-    await tx.selfInspectionStatusLog.create({
-      data: {
-        selfInspectionId: inspection.id,
-        previousStatus: null,
-        nextStatus: SelfInspectionStatus.DRAFT,
-        note: "Autoinspeccion creada y enlace seguro generado",
-      },
-    });
-
-    return inspection;
-  });
-
-  vehicle = vehicle ?? customer.vehicles[0] ?? null;
-
-  return {
-    inspectionId: created.id,
-    token: rawToken,
-    accessTokenExpiresAt,
-    publicPath: `/self-inspections/start/${rawToken}`,
-    customer: {
-      id: customer.id,
-      fullName: customer.fullName,
-    },
-    vehicle: vehicle
-      ? {
-          id: vehicle.id,
-          label: `${vehicle.make} ${vehicle.model} / ${vehicle.plate ?? "Sin patente"}`,
-        }
-      : null,
-  };
-}
-
-export async function getPublicSelfInspectionWizard(token: string) {
+async function getAuthorizedPublicSelfInspectionEntity(token: string) {
   const inspection = await getPublicSelfInspectionEntity(token);
+  const session = await getCurrentSession();
+
+  if (!session) {
+    throw new UnauthorizedError("Inicia sesion para continuar con la autoinspeccion");
+  }
+
+  if (session.user.role !== UserRole.CUSTOMER) {
+    throw new ForbiddenError("Esta autoinspeccion requiere una cuenta de cliente");
+  }
+
+  if (!canSessionAccessInspection(session, inspection)) {
+    throw new ForbiddenError("Esta autoinspeccion fue enviada a otro correo");
+  }
+
+  return claimPendingInspectionCustomer(inspection, session);
+}
+
+async function assertInspectionCustomerEditableByToken(token: string) {
+  const inspection = await getAuthorizedPublicSelfInspectionEntity(token);
+
+  if (!isCustomerEditableStatus(inspection.status)) {
+    throw new ConflictError("La autoinspeccion ya fue enviada y no admite mas cambios");
+  }
+
+  return inspection;
+}
+
+function buildPublicSelfInspectionWizardPayload(inspection: PublicInspectionEntity) {
   const answersMap = mapAnswersToRecord(inspection.answers);
   const customerNotes = parseCustomerNotes(inspection.notes);
+  const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
   const criticalFindings = createCriticalFindings({
     snapshot: inspection.vehicleSnapshot
       ? {
           starts: inspection.vehicleSnapshot.starts,
-          transmission: inspection.vehicleSnapshot.transmission,
         }
       : null,
     canDrive: inspection.canDrive,
@@ -792,30 +657,14 @@ export async function getPublicSelfInspectionWizard(token: string) {
     },
     customer: {
       id: inspection.customer.id,
-      fullName: inspection.customer.fullName,
-      phone: inspection.customer.phone,
-      email: inspection.customer.email,
+      fullName: contactSnapshot.fullName,
+      phone: contactSnapshot.phone,
+      email: contactSnapshot.email,
     },
-    vehicles: inspection.customer.vehicles.map((vehicle) => ({
-      id: vehicle.id,
-      label: `${vehicle.make} ${vehicle.model} / ${vehicle.plate ?? "Sin patente"}`,
-      plate: vehicle.plate,
-      vin: vehicle.vin,
-      make: vehicle.make,
-      model: vehicle.model,
-      year: vehicle.year,
-      color: vehicle.color,
-      mileage: vehicle.mileage,
-      fuelType: vehicle.fuelType,
-      transmission: vehicle.transmission,
-    })),
     form: {
-      vehicle: buildVehicleStepDraft(inspection),
-      reason: buildReasonStepDraft(inspection, answersMap),
-      general: buildGeneralStepDraft(answersMap),
-      damage: buildDamageStepDraft(answersMap),
-      history: buildHistoryStepDraft(answersMap),
-      notes: customerNotes,
+      customerVehicle: buildCustomerVehicleStepDraft(inspection, answersMap),
+      problem: buildProblemStepDraft(inspection, answersMap),
+      evidence: customerNotes,
     },
     photos: inspection.photos.map((photo) => ({
       id: photo.id,
@@ -834,6 +683,66 @@ export async function getPublicSelfInspectionWizard(token: string) {
       (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
     ),
   };
+}
+
+async function updateInspectionDerivedState(selfInspectionId: string, input?: { lastCompletedStep?: number }) {
+  const inspection = await selfInspectionRepository.findSummaryById(selfInspectionId);
+
+  if (!inspection) {
+    throw new NotFoundError("Autoinspeccion no encontrada");
+  }
+
+  const answersMap = mapAnswersToRecord(inspection.answers);
+  const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
+  const overallRiskLevel = calculateRiskLevel({
+    snapshot: inspection.vehicleSnapshot
+      ? {
+          starts: inspection.vehicleSnapshot.starts,
+        }
+      : null,
+    canDrive: inspection.canDrive,
+    answersMap,
+  });
+  const customerNotes = parseCustomerNotes(inspection.notes);
+  const summaryGenerated = buildSummary({
+    contact: contactSnapshot,
+    snapshot: inspection.vehicleSnapshot
+      ? {
+          plate: inspection.vehicleSnapshot.plate,
+          make: inspection.vehicleSnapshot.make,
+          model: inspection.vehicleSnapshot.model,
+          year: inspection.vehicleSnapshot.year,
+          mileage: inspection.vehicleSnapshot.mileage,
+          starts: inspection.vehicleSnapshot.starts,
+        }
+      : null,
+    canDrive: inspection.canDrive,
+    overallRiskLevel,
+    answersMap,
+    photoCount: inspection.photos.length,
+    finalComment: customerNotes.finalComment,
+  });
+  const lastCompletedStep = Math.max(
+    input?.lastCompletedStep ?? inspection.lastCompletedStep,
+    inspection.lastCompletedStep,
+  );
+  const nextStatus =
+    inspection.status === SelfInspectionStatus.DRAFT && lastCompletedStep > 0
+      ? SelfInspectionStatus.IN_PROGRESS
+      : inspection.status;
+
+  await prisma.selfInspection.update({
+    where: {
+      id: selfInspectionId,
+    },
+    data: {
+      status: nextStatus,
+      overallRiskLevel,
+      summaryGenerated,
+      lastCompletedStep,
+      completionPercent: getCompletionPercent(lastCompletedStep, nextStatus),
+    },
+  });
 }
 
 async function upsertAnswerRecords(selfInspectionId: string, answers: AnswerRecordInput[]) {
@@ -871,16 +780,12 @@ async function upsertAnswerRecords(selfInspectionId: string, answers: AnswerReco
   );
 }
 
-async function deleteAnswerKeys(selfInspectionId: string, questionKeys: readonly string[]) {
-  if (questionKeys.length === 0) {
-    return;
-  }
-
+async function deleteDeprecatedPublicAnswers(selfInspectionId: string) {
   await prisma.selfInspectionAnswer.deleteMany({
     where: {
       selfInspectionId,
       questionKey: {
-        in: [...questionKeys],
+        notIn: [...SELF_INSPECTION_PUBLIC_QUESTION_KEYS],
       },
     },
   });
@@ -888,347 +793,317 @@ async function deleteAnswerKeys(selfInspectionId: string, questionKeys: readonly
 
 async function persistCustomerNotes(
   selfInspectionId: string,
-  input: Record<string, string | undefined>,
+  input: {
+    finalComment?: string;
+  },
 ) {
-  const noteTypes = [...new Set(CUSTOMER_NOTE_FIELDS.map((entry) => entry.noteType))];
-
   await prisma.$transaction(async (tx) => {
     await tx.selfInspectionNote.deleteMany({
       where: {
         selfInspectionId,
-        noteType: {
-          in: noteTypes,
-        },
+        noteType: FINAL_COMMENT_NOTE_TYPE,
       },
     });
 
-    const notesToCreate = CUSTOMER_NOTE_FIELDS.flatMap((entry) => {
-      const rawValue = input[entry.fieldKey];
-      const trimmed = rawValue?.trim();
+    const finalComment = input.finalComment?.trim();
 
-      if (!trimmed) {
-        return [];
-      }
-
-      return [
-        {
-          selfInspectionId,
-          noteType: entry.noteType,
-          content: serializeNoteContent(entry.fieldKey, trimmed),
-        },
-      ];
-    });
-
-    if (notesToCreate.length > 0) {
-      await tx.selfInspectionNote.createMany({
-        data: notesToCreate,
-      });
+    if (!finalComment) {
+      return;
     }
+
+    await tx.selfInspectionNote.create({
+      data: {
+        selfInspectionId,
+        noteType: FINAL_COMMENT_NOTE_TYPE,
+        content: serializeNoteContent(FINAL_COMMENT_FIELD_KEY, finalComment),
+      },
+    });
   });
 }
 
-async function syncTransmissionBranchAnswers(
-  selfInspectionId: string,
-  transmission: VehicleTransmissionType,
+function buildCustomerVehicleAnswerRecords(
+  data: ReturnType<typeof selfInspectionVehicleStepSchema.parse>,
 ) {
-  if (isAutomaticTransmission(transmission)) {
-    await deleteAnswerKeys(selfInspectionId, SELF_INSPECTION_MANUAL_ONLY_KEYS);
-    return;
-  }
-
-  if (transmission === VehicleTransmissionType.MANUAL) {
-    await deleteAnswerKeys(selfInspectionId, SELF_INSPECTION_AUTOMATIC_ONLY_KEYS);
-    return;
-  }
-
-  await deleteAnswerKeys(selfInspectionId, [
-    ...SELF_INSPECTION_AUTOMATIC_ONLY_KEYS,
-    ...SELF_INSPECTION_MANUAL_ONLY_KEYS,
-  ]);
-}
-
-function buildReasonAnswerRecords(data: ReturnType<typeof selfInspectionReasonStepSchema.parse>) {
-  const answers = [buildAnswerRecord("reason_can_drive", data.canDrive)];
-
-  if (data.problemSince) {
-    answers.push(buildAnswerRecord("reason_problem_since", data.problemSince));
-  }
-
-  if (data.issueFrequency) {
-    answers.push(buildAnswerRecord("reason_issue_frequency", data.issueFrequency));
-  }
-
-  if (typeof data.worsenedRecently === "boolean") {
-    answers.push(buildAnswerRecord("reason_worsened_recently", data.worsenedRecently));
-  }
-
-  return answers;
-}
-
-function buildGeneralAnswerRecords(data: ReturnType<typeof selfInspectionGeneralStepSchema.parse>) {
-  const answers: AnswerRecordInput[] = [
-    buildAnswerRecord("operational_start_behavior", data.operational.startBehavior),
-    buildAnswerRecord("operational_unusual_noises", data.operational.unusualNoises),
-    buildAnswerRecord("operational_vibrations", data.operational.vibrations),
-    buildAnswerRecord("operational_shuts_off", data.operational.shutsOffByItself),
-    buildAnswerRecord("operational_power_loss", data.operational.powerLoss),
-    buildAnswerRecord("operational_unusual_smoke", data.operational.unusualSmoke),
-    buildAnswerRecord("operational_strange_smell", data.operational.strangeSmell),
-    buildAnswerRecord(
-      "operational_dashboard_warning_lights",
-      data.operational.dashboardWarningLights,
-    ),
-    buildAnswerRecord(
-      "operational_dashboard_warning_details",
-      data.operational.dashboardWarningDetails ?? "",
-    ),
-    buildAnswerRecord("engine_knocking_noises", data.engine.knockingNoises),
-    buildAnswerRecord("engine_power_loss_under_load", data.engine.powerLossUnderLoad),
-    buildAnswerRecord("engine_idle_unstable", data.engine.idleUnstable),
-    buildAnswerRecord("engine_overheating", data.engine.overheating),
-    buildAnswerRecord("engine_fluid_leaks", data.engine.fluidLeaks),
-    buildAnswerRecord("engine_fluid_leak_details", data.engine.fluidLeakDetails ?? ""),
-    buildAnswerRecord("engine_check_engine_light", data.engine.checkEngineLight),
-    buildAnswerRecord("engine_cold_start_problems", data.engine.coldStartProblems),
-    buildAnswerRecord("engine_high_fuel_consumption", data.engine.highFuelConsumption),
-    buildAnswerRecord("brakes_working_properly", data.brakes.workingProperly),
-    buildAnswerRecord("brakes_noise", data.brakes.noise),
-    buildAnswerRecord("brakes_pedal_feel", data.brakes.pedalFeel),
-    buildAnswerRecord("brakes_pulls_side", data.brakes.pullsSide),
-    buildAnswerRecord("brakes_vibration", data.brakes.vibration),
-    buildAnswerRecord("brakes_abs_warning", data.brakes.absWarning),
-    buildAnswerRecord("steering_hard", data.steeringSuspension.steeringHard),
-    buildAnswerRecord("steering_vibration", data.steeringSuspension.steeringVibration),
-    buildAnswerRecord("steering_pulls_side", data.steeringSuspension.vehiclePullsSide),
-    buildAnswerRecord("suspension_knocks", data.steeringSuspension.suspensionKnocks),
-    buildAnswerRecord(
-      "suspension_excessive_bounce",
-      data.steeringSuspension.excessiveBounce,
-    ),
-    buildAnswerRecord("suspension_uneven_height", data.steeringSuspension.unevenRideHeight),
-    buildAnswerRecord("tires_worn", data.tires.worn),
-    buildAnswerRecord("tires_wear_pattern", data.tires.wearPattern),
-    buildAnswerRecord("tires_low_pressure_or_puncture", data.tires.lowPressureOrPuncture),
-    buildAnswerRecord("tires_damaged_rims", data.tires.damagedRims),
-    buildAnswerRecord("tires_speed_vibration", data.tires.speedVibration),
-    buildAnswerRecord("electrical_front_lights", data.electrical.frontLights),
-    buildAnswerRecord("electrical_rear_lights", data.electrical.rearLights),
-    buildAnswerRecord("electrical_turn_signals", data.electrical.turnSignals),
-    buildAnswerRecord("electrical_horn", data.electrical.horn),
-    buildAnswerRecord("electrical_climate_control", data.electrical.climateControl),
-    buildAnswerRecord("electrical_central_locking", data.electrical.centralLocking),
-    buildAnswerRecord("electrical_windows", data.electrical.windows),
-    buildAnswerRecord(
-      "electrical_battery_failed_recently",
-      data.electrical.batteryFailedRecently,
-    ),
-    buildAnswerRecord("interior_visible_damage", data.interior.visibleDamage),
-    buildAnswerRecord(
-      "interior_instrument_panel_working",
-      data.interior.instrumentPanelWorking,
-    ),
-    buildAnswerRecord("interior_multimedia_working", data.interior.multimediaWorking),
-    buildAnswerRecord("interior_water_leaks", data.interior.waterLeaks),
-    buildAnswerRecord("interior_cabin_strange_smells", data.interior.cabinStrangeSmells),
-    buildAnswerRecord("exterior_scratches", data.exterior.scratches),
-    buildAnswerRecord("exterior_dents", data.exterior.dents),
-    buildAnswerRecord("exterior_misaligned_panels", data.exterior.misalignedPanels),
-    buildAnswerRecord(
-      "exterior_damaged_glass_or_lights",
-      data.exterior.damagedGlassOrLights,
-    ),
-    buildAnswerRecord("exterior_broken_trim", data.exterior.brokenTrim),
-    buildAnswerRecord("exterior_damage_age", data.exterior.damageAge),
-  ];
-
-  if (data.automaticTransmission) {
-    answers.push(
-      buildAnswerRecord(
-        "transmission_auto_shift_smooth",
-        data.automaticTransmission.shiftSmooth,
-      ),
-      buildAnswerRecord("transmission_auto_jerks", data.automaticTransmission.jerks),
-      buildAnswerRecord("transmission_auto_delay", data.automaticTransmission.delay),
-      buildAnswerRecord(
-        "transmission_auto_shift_noise",
-        data.automaticTransmission.shiftNoise,
-      ),
-    );
-  }
-
-  if (data.manualTransmission) {
-    answers.push(
-      buildAnswerRecord("transmission_manual_hard_gears", data.manualTransmission.hardGears),
-      buildAnswerRecord(
-        "transmission_manual_clutch_slipping",
-        data.manualTransmission.clutchSlipping,
-      ),
-      buildAnswerRecord(
-        "transmission_manual_clutch_pedal_position",
-        data.manualTransmission.clutchPedalPosition,
-      ),
-      buildAnswerRecord("transmission_manual_clutch_noise", data.manualTransmission.clutchNoise),
-    );
-  }
-
-  return answers;
-}
-
-function buildDamageAnswerRecords(data: ReturnType<typeof selfInspectionDamageStepSchema.parse>) {
   return [
-    buildAnswerRecord("damage_recent_collision", data.recentCollision),
-    buildAnswerRecord("damage_affected_zone", data.affectedZone),
-    buildAnswerRecord("damage_affects_functionality", data.affectsFunctionality),
-    buildAnswerRecord("damage_structural_impact", data.structuralImpact),
-    buildAnswerRecord("damage_exposure_events", data.exposureEvents),
-    buildAnswerRecord("damage_insurance_or_police_report", data.insuranceOrPoliceReport),
-    buildAnswerRecord(
-      "damage_wants_insurance_evaluation",
-      data.wantsInsuranceEvaluation,
-    ),
+    buildAnswerRecord("customer_full_name", data.fullName),
+    buildAnswerRecord("customer_phone", data.phone),
+    buildAnswerRecord("customer_email", data.email.toLowerCase()),
+    buildAnswerRecord("vehicle_plate", data.plate),
+    buildAnswerRecord("vehicle_make", data.make),
+    buildAnswerRecord("vehicle_model", data.model),
+    buildAnswerRecord("vehicle_year", data.year),
+    buildAnswerRecord("vehicle_mileage", data.mileage),
   ];
 }
 
-function buildHistoryAnswerRecords(data: ReturnType<typeof selfInspectionHistoryStepSchema.parse>) {
+function buildProblemAnswerRecords(data: ReturnType<typeof selfInspectionReasonStepSchema.parse>) {
   return [
-    buildAnswerRecord("history_last_maintenance_at", data.lastMaintenanceAt),
-    buildAnswerRecord("history_last_maintenance_performed", data.lastMaintenancePerformed),
-    buildAnswerRecord(
-      "history_brakes_replaced_recently",
-      data.brakesReplacedRecently,
-    ),
-    buildAnswerRecord(
-      "history_battery_replaced_recently",
-      data.batteryReplacedRecently,
-    ),
-    buildAnswerRecord("history_tires_replaced_recently", data.tiresReplacedRecently),
-    buildAnswerRecord("history_oil_and_filters_changed", data.oilAndFiltersChanged),
-    buildAnswerRecord("history_pending_recent_repairs", data.pendingRecentRepairs),
-    buildAnswerRecord(
-      "history_checked_by_another_workshop",
-      data.checkedByAnotherWorkshop,
-    ),
-    buildAnswerRecord(
-      "history_previous_quote_or_diagnosis",
-      data.previousQuoteOrDiagnosis,
-    ),
-    buildAnswerRecord(
-      "history_previous_diagnosis_details",
-      data.previousDiagnosisDetails ?? "",
-    ),
+    buildAnswerRecord("reason_problem_type", data.problemType),
+    buildAnswerRecord("vehicle_starts", data.vehicleStarts),
+    buildAnswerRecord("reason_can_drive", data.canDrive),
+    buildAnswerRecord("reason_warning_lights", data.warningLights),
+    buildAnswerRecord("reason_problem_since", data.problemSince),
+    buildAnswerRecord("reason_issue_frequency", data.issueFrequency),
+    buildAnswerRecord("reason_problem_description", data.description),
   ];
 }
 
-function getRequiredAnswerKeysForSubmission(
-  transmission: VehicleTransmissionType,
-  inspectionReason: SelfInspectionReason,
-  answersMap: AnswerMap,
-) {
-  const required: string[] = [...SELF_INSPECTION_REQUIRED_ANSWER_KEYS];
+function getRequiredAnswerKeysForSubmission() {
+  return [...SELF_INSPECTION_REQUIRED_ANSWER_KEYS];
+}
 
-  const requiresProblemTimeline =
-    inspectionReason !== SelfInspectionReason.PREVENTIVE_MAINTENANCE &&
-    inspectionReason !== SelfInspectionReason.PRE_PURCHASE;
+function isAnswerMissing(value: unknown) {
+  if (value === undefined || value === null) {
+    return true;
+  }
 
-  if (!requiresProblemTimeline) {
-    const optionalReasonKeys = [
-      "reason_problem_since",
-      "reason_issue_frequency",
-      "reason_worsened_recently",
-    ];
+  if (typeof value === "string") {
+    return value.trim() === "";
+  }
 
-    for (const key of optionalReasonKeys) {
-      const index = required.indexOf(key);
+  return false;
+}
 
-      if (index >= 0) {
-        required.splice(index, 1);
+export async function listSelfInspections(input?: unknown) {
+  const filters = selfInspectionFiltersSchema.parse(input ?? {});
+  const inspections = await selfInspectionRepository.list({
+    search: filters.q?.trim(),
+    status: filters.status,
+    risk: filters.risk,
+  });
+
+  return inspections.map((inspection) => {
+    const answersMap = mapAnswersToRecord(inspection.answers);
+    const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
+    const criticalFindings = createCriticalFindings({
+      snapshot: inspection.vehicleSnapshot
+        ? {
+            starts: inspection.vehicleSnapshot.starts,
+          }
+        : null,
+      canDrive: inspection.canDrive,
+      answersMap,
+    });
+
+    return {
+      ...inspection,
+      customer: {
+        ...inspection.customer,
+        ...contactSnapshot,
+      },
+      criticalFindings,
+    };
+  });
+}
+
+export async function getSelfInspectionById(id: string) {
+  const inspection = await selfInspectionRepository.findById(id);
+
+  if (!inspection) {
+    throw new NotFoundError("Autoinspeccion no encontrada");
+  }
+
+  const answersMap = mapAnswersToRecord(inspection.answers);
+  const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
+  const groupedAnswers = Object.entries(SELF_INSPECTION_SECTION_LABELS).map(
+    ([sectionKey, sectionLabel]) => ({
+      key: sectionKey,
+      label: sectionLabel,
+      answers: inspection.answers.filter((answer) => answer.section === sectionKey),
+    }),
+  );
+  const criticalFindings = createCriticalFindings({
+    snapshot: inspection.vehicleSnapshot
+      ? {
+          starts: inspection.vehicleSnapshot.starts,
+        }
+      : null,
+    canDrive: inspection.canDrive,
+    answersMap,
+  });
+  const missingRequiredPhotoTypes = SELF_INSPECTION_REQUIRED_PHOTO_TYPES.filter(
+    (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
+  );
+
+  return {
+    ...inspection,
+    customer: {
+      ...inspection.customer,
+      ...contactSnapshot,
+    },
+    groupedAnswers,
+    criticalFindings,
+    missingRequiredPhotoTypes,
+  };
+}
+
+export async function createSelfInspectionInvite(input: unknown) {
+  const data = createSelfInspectionInviteSchema.parse(input) as CreateSelfInspectionInviteInput;
+  const rawToken = createAccessToken();
+  const accessTokenHash = hashAccessToken(rawToken);
+  const accessTokenExpiresAt = new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000);
+  const pendingClient = createPendingClientDraft();
+
+  const created = await prisma.$transaction(async (tx) => {
+    const customer = await tx.client.create({
+      data: pendingClient,
+    });
+
+    const inspection = await tx.selfInspection.create({
+      data: {
+        customerId: customer.id,
+        sourceChannel: data.sourceChannel,
+        accessTokenHash,
+        accessTokenExpiresAt,
+        status: SelfInspectionStatus.DRAFT,
+        lastCompletedStep: 0,
+        completionPercent: 0,
+      },
+    });
+
+    await tx.selfInspectionStatusLog.create({
+      data: {
+        selfInspectionId: inspection.id,
+        previousStatus: null,
+        nextStatus: SelfInspectionStatus.DRAFT,
+        note: "Autoinspeccion creada y enlace seguro generado",
+      },
+    });
+
+    return {
+      inspection,
+      customer,
+    };
+  });
+
+  return {
+    inspectionId: created.inspection.id,
+    token: rawToken,
+    accessTokenExpiresAt,
+    publicPath: `/self-inspections/start/${rawToken}`,
+    customer: {
+      id: created.customer.id,
+      fullName: created.customer.fullName,
+    },
+    vehicle: null,
+  };
+}
+
+export async function getPublicSelfInspectionStartPageData(token: string) {
+  let inspection = await getPublicSelfInspectionEntity(token);
+  const session = await getCurrentSession();
+  const authorized = canSessionAccessInspection(session, inspection);
+
+  if (authorized && session?.user.role === UserRole.CUSTOMER) {
+    inspection = await claimPendingInspectionCustomer(inspection, session);
+  }
+
+  return {
+    access: {
+      authorized,
+      sessionEmail: session?.user.email ?? null,
+      sessionRole: session?.user.role ?? null,
+      status: inspection.status,
+      statusLabel: SELF_INSPECTION_STATUS_LABELS[inspection.status],
+    },
+    wizardData: authorized ? buildPublicSelfInspectionWizardPayload(inspection) : null,
+  };
+}
+
+export async function authorizePublicSelfInspectionAccess(token: string, input: unknown) {
+  const inspection = await getPublicSelfInspectionEntity(token);
+  const data = publicSelfInspectionAccessSchema.parse(input);
+  const email = normalizeEmail(data.email);
+
+  if (data.mode === "register") {
+    const existing = await userRepository.findByEmail(email);
+
+    if (existing) {
+      if (!existing.active) {
+        throw new ConflictError("Ya existe una cuenta desactivada para este correo");
       }
+
+      if (existing.role !== UserRole.CUSTOMER) {
+        throw new ConflictError("Este correo ya esta ocupado por otra cuenta del sistema");
+      }
+
+      throw new ConflictError("Ya existe una cuenta con este correo. Inicia sesion.");
     }
+
+    await userRepository.create({
+      name: data.fullName,
+      email,
+      passwordHash: await hash(data.password, 10),
+      role: UserRole.CUSTOMER,
+    });
   }
 
-  if (isAutomaticTransmission(transmission)) {
-    required.push(...SELF_INSPECTION_AUTOMATIC_ONLY_KEYS);
-  } else if (transmission === VehicleTransmissionType.MANUAL) {
-    required.push(...SELF_INSPECTION_MANUAL_ONLY_KEYS);
+  const user = await signIn({
+    email,
+    password: data.password,
+  });
+
+  if (user.role !== UserRole.CUSTOMER) {
+    await signOut();
+    throw new ForbiddenError("Esta autoinspeccion requiere una cuenta de cliente");
   }
 
-  if (answersMap.operational_dashboard_warning_lights === true) {
-    required.push("operational_dashboard_warning_details");
+  if (
+    !isPendingInspectionCustomer(inspection.customer) &&
+    normalizeEmail(inspection.customer.email) !== email
+  ) {
+    await signOut();
+    throw new ForbiddenError("Esta autoinspeccion ya esta asociada a otra cuenta");
   }
 
-  if (answersMap.engine_fluid_leaks === true) {
-    required.push("engine_fluid_leak_details");
-  }
+  return {
+    authorized: true,
+    customerEmail: email,
+  };
+}
 
-  if (answersMap.history_previous_quote_or_diagnosis === true) {
-    required.push("history_previous_diagnosis_details");
-  }
-
-  return required;
+export async function getPublicSelfInspectionWizard(token: string) {
+  const inspection = await getAuthorizedPublicSelfInspectionEntity(token);
+  return buildPublicSelfInspectionWizardPayload(inspection);
 }
 
 export async function savePublicSelfInspectionVehicle(token: string, input: unknown) {
   const inspection = await assertInspectionCustomerEditableByToken(token);
   const data = selfInspectionVehicleStepSchema.parse(input);
 
-  let selectedVehicle = null;
-
-  if (data.vehicleId) {
-    selectedVehicle = await selfInspectionRepository.findVehicleForCustomer(
-      inspection.customerId,
-      data.vehicleId,
-    );
-
-    if (!selectedVehicle) {
-      throw new ConflictError("El vehiculo seleccionado no pertenece al cliente");
-    }
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.selfInspection.update({
-      where: {
-        id: inspection.id,
-      },
-      data: {
-        vehicleId: selectedVehicle?.id ?? null,
-      },
-    });
-
-    await tx.selfInspectionVehicleSnapshot.upsert({
-      where: {
-        selfInspectionId: inspection.id,
-      },
-      create: {
-        selfInspectionId: inspection.id,
-        plate: data.plate,
-        vin: data.vin ?? null,
-        make: data.make,
-        model: data.model,
-        year: data.year,
-        color: data.color ?? null,
-        mileage: data.mileage,
-        fuelType: data.fuelType,
-        transmission: data.transmission,
-        starts: data.starts,
-      },
-      update: {
-        plate: data.plate,
-        vin: data.vin ?? null,
-        make: data.make,
-        model: data.model,
-        year: data.year,
-        color: data.color ?? null,
-        mileage: data.mileage,
-        fuelType: data.fuelType,
-        transmission: data.transmission,
-        starts: data.starts,
-      },
-    });
+  await prisma.selfInspectionVehicleSnapshot.upsert({
+    where: {
+      selfInspectionId: inspection.id,
+    },
+    create: {
+      selfInspectionId: inspection.id,
+      plate: data.plate,
+      vin: inspection.vehicleSnapshot?.vin ?? inspection.vehicle?.vin ?? null,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      color: inspection.vehicleSnapshot?.color ?? inspection.vehicle?.color ?? null,
+      mileage: data.mileage,
+      fuelType:
+        inspection.vehicleSnapshot?.fuelType ?? inspection.vehicle?.fuelType ?? VehicleFuelType.OTHER,
+      transmission:
+        inspection.vehicleSnapshot?.transmission ??
+        inspection.vehicle?.transmission ??
+        VehicleTransmissionType.OTHER,
+      starts: inspection.vehicleSnapshot?.starts ?? true,
+    },
+    update: {
+      plate: data.plate,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      mileage: data.mileage,
+    },
   });
 
-  await upsertAnswerRecords(inspection.id, [buildAnswerRecord("vehicle_starts", data.starts)]);
-  await syncTransmissionBranchAnswers(inspection.id, data.transmission);
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 2 });
+  await deleteDeprecatedPublicAnswers(inspection.id);
+  await upsertAnswerRecords(inspection.id, buildCustomerVehicleAnswerRecords(data));
+  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 1 });
 
   return getPublicSelfInspectionWizard(token);
 }
@@ -1237,87 +1112,38 @@ export async function savePublicSelfInspectionReason(token: string, input: unkno
   const inspection = await assertInspectionCustomerEditableByToken(token);
   const data = selfInspectionReasonStepSchema.parse(input);
 
-  await prisma.selfInspection.update({
-    where: {
-      id: inspection.id,
-    },
-    data: {
-      inspectionReason: data.inspectionReason,
-      inspectionReasonOther:
-        data.inspectionReason === "OTHER" ? data.inspectionReasonOther ?? null : null,
-      mainComplaint: data.mainComplaint,
-      canDrive: data.canDrive,
-    },
-  });
-
-  await upsertAnswerRecords(inspection.id, buildReasonAnswerRecords(data));
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 3 });
-
-  return getPublicSelfInspectionWizard(token);
-}
-
-export async function savePublicSelfInspectionGeneral(token: string, input: unknown) {
-  const inspection = await assertInspectionCustomerEditableByToken(token);
-  const data = selfInspectionGeneralStepSchema.parse(input);
-  const transmission =
-    inspection.vehicleSnapshot?.transmission ?? inspection.vehicle?.transmission ?? null;
-
-  if (!transmission) {
-    throw new ConflictError("Debes completar primero la identificacion del vehiculo");
+  if (!inspection.vehicleSnapshot) {
+    throw new ConflictError("Debes completar primero los datos del vehiculo");
   }
 
-  if (isAutomaticTransmission(transmission) && !data.automaticTransmission) {
-    throw new AppError("Faltan respuestas de la seccion de transmision automatica", 422);
-  }
+  const mappedReason = mapProblemTypeToInspectionReason(data.problemType);
 
-  if (transmission === VehicleTransmissionType.MANUAL && !data.manualTransmission) {
-    throw new AppError("Faltan respuestas de la seccion de embrague manual", 422);
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.selfInspection.update({
+      where: {
+        id: inspection.id,
+      },
+      data: {
+        inspectionReason: mappedReason.inspectionReason,
+        inspectionReasonOther: mappedReason.inspectionReasonOther,
+        mainComplaint: data.description,
+        canDrive: data.canDrive,
+      },
+    });
 
-  if (data.operational.startBehavior === "NO_START" && inspection.vehicleSnapshot?.starts !== false) {
-    await prisma.selfInspectionVehicleSnapshot.update({
+    await tx.selfInspectionVehicleSnapshot.update({
       where: {
         selfInspectionId: inspection.id,
       },
       data: {
-        starts: false,
+        starts: data.vehicleStarts,
       },
     });
-  }
+  });
 
-  await upsertAnswerRecords(inspection.id, buildGeneralAnswerRecords(data));
-  await syncTransmissionBranchAnswers(inspection.id, transmission);
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 4 });
-
-  return getPublicSelfInspectionWizard(token);
-}
-
-export async function savePublicSelfInspectionDamage(token: string, input: unknown) {
-  const inspection = await assertInspectionCustomerEditableByToken(token);
-  const data = selfInspectionDamageStepSchema.parse(input);
-
-  await upsertAnswerRecords(inspection.id, buildDamageAnswerRecords(data));
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 5 });
-
-  return getPublicSelfInspectionWizard(token);
-}
-
-export async function savePublicSelfInspectionHistory(token: string, input: unknown) {
-  const inspection = await assertInspectionCustomerEditableByToken(token);
-  const data = selfInspectionHistoryStepSchema.parse(input);
-
-  await upsertAnswerRecords(inspection.id, buildHistoryAnswerRecords(data));
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 6 });
-
-  return getPublicSelfInspectionWizard(token);
-}
-
-export async function savePublicSelfInspectionNotes(token: string, input: unknown) {
-  const inspection = await assertInspectionCustomerEditableByToken(token);
-  const data = selfInspectionNotesStepSchema.parse(input);
-
-  await persistCustomerNotes(inspection.id, data);
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 8 });
+  await deleteDeprecatedPublicAnswers(inspection.id);
+  await upsertAnswerRecords(inspection.id, buildProblemAnswerRecords(data));
+  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 2 });
 
   return getPublicSelfInspectionWizard(token);
 }
@@ -1370,7 +1196,7 @@ export async function uploadPublicSelfInspectionPhoto(
   });
 
   await Promise.all(existingPhotos.map((photo) => deleteInspectionPhotoFile(photo.storageKey)));
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 7 });
+  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 3 });
 
   return getPublicSelfInspectionWizard(token);
 }
@@ -1394,14 +1220,13 @@ export async function deletePublicSelfInspectionPhoto(token: string, photoId: st
     },
   });
   await deleteInspectionPhotoFile(photo.storageKey);
-  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 7 });
+  await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 3 });
 
   return getPublicSelfInspectionWizard(token);
 }
 
 export async function submitPublicSelfInspection(token: string, input: unknown) {
-  submitSelfInspectionSchema.parse(input);
-
+  const data = submitSelfInspectionSchema.parse(input);
   const editableInspection = await assertInspectionCustomerEditableByToken(token);
   const inspection = await selfInspectionRepository.findSummaryById(editableInspection.id);
 
@@ -1410,35 +1235,13 @@ export async function submitPublicSelfInspection(token: string, input: unknown) 
   }
 
   const answersMap = mapAnswersToRecord(inspection.answers);
-  const requiredAnswerKeys = getRequiredAnswerKeysForSubmission(
-    inspection.vehicleSnapshot.transmission,
-    inspection.inspectionReason!,
-    answersMap,
+  const requiredAnswerKeys = getRequiredAnswerKeysForSubmission();
+  const missingAnswers = requiredAnswerKeys.filter((questionKey) =>
+    isAnswerMissing(answersMap[questionKey]),
   );
-  const missingAnswers = requiredAnswerKeys.filter((questionKey) => {
-    const value = answersMap[questionKey];
-
-    if (value === undefined || value === null) {
-      return true;
-    }
-
-    if (typeof value === "string") {
-      return value.trim() === "";
-    }
-
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return false;
-  });
   const missingPhotoTypes = SELF_INSPECTION_REQUIRED_PHOTO_TYPES.filter(
     (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
   );
-
-  if (!inspection.inspectionReason || !inspection.mainComplaint || inspection.canDrive === null) {
-    throw new AppError("Faltan datos clave del motivo principal de inspeccion", 422);
-  }
 
   if (missingAnswers.length > 0) {
     const labels = missingAnswers
@@ -1451,52 +1254,64 @@ export async function submitPublicSelfInspection(token: string, input: unknown) 
     const labels = missingPhotoTypes
       .map((photoType) => SELF_INSPECTION_PHOTO_TYPE_LABELS[photoType])
       .join(", ");
-    throw new AppError(`Faltan fotos obligatorias: ${labels}`, 422);
+    throw new AppError(`Faltan imagenes obligatorias: ${labels}`, 422);
   }
 
+  await persistCustomerNotes(inspection.id, {
+    finalComment: data.finalComment,
+  });
+
+  const refreshed = await selfInspectionRepository.findSummaryById(inspection.id);
+
+  if (!refreshed || !refreshed.vehicleSnapshot) {
+    throw new AppError("No fue posible recalcular la autoinspeccion", 500);
+  }
+
+  const refreshedAnswersMap = mapAnswersToRecord(refreshed.answers);
+  const contactSnapshot = buildContactSnapshot(refreshed.customer, refreshedAnswersMap);
+  const customerNotes = parseCustomerNotes(refreshed.notes);
   const overallRiskLevel = calculateRiskLevel({
     snapshot: {
-      starts: inspection.vehicleSnapshot.starts,
+      starts: refreshed.vehicleSnapshot.starts,
     },
-    canDrive: inspection.canDrive,
-    answersMap,
+    canDrive: refreshed.canDrive,
+    answersMap: refreshedAnswersMap,
   });
   const summaryGenerated = buildSummary({
-    customerName: inspection.customer.fullName,
+    contact: contactSnapshot,
     snapshot: {
-      plate: inspection.vehicleSnapshot.plate,
-      make: inspection.vehicleSnapshot.make,
-      model: inspection.vehicleSnapshot.model,
-      mileage: inspection.vehicleSnapshot.mileage,
-      starts: inspection.vehicleSnapshot.starts,
-      transmission: inspection.vehicleSnapshot.transmission,
+      plate: refreshed.vehicleSnapshot.plate,
+      make: refreshed.vehicleSnapshot.make,
+      model: refreshed.vehicleSnapshot.model,
+      year: refreshed.vehicleSnapshot.year,
+      mileage: refreshed.vehicleSnapshot.mileage,
+      starts: refreshed.vehicleSnapshot.starts,
     },
-    inspectionReason: SELF_INSPECTION_REASON_LABELS[inspection.inspectionReason],
-    mainComplaint: inspection.mainComplaint,
-    canDrive: inspection.canDrive,
+    canDrive: refreshed.canDrive,
     overallRiskLevel,
-    answersMap,
-    photoCount: inspection.photos.length,
+    answersMap: refreshedAnswersMap,
+    photoCount: refreshed.photos.length,
+    finalComment: customerNotes.finalComment,
   });
 
   await prisma.$transaction(async (tx) => {
     await tx.selfInspection.update({
       where: {
-        id: inspection.id,
+        id: refreshed.id,
       },
       data: {
         status: SelfInspectionStatus.SUBMITTED,
         submittedAt: new Date(),
         overallRiskLevel,
         summaryGenerated,
-        lastCompletedStep: 9,
+        lastCompletedStep: 3,
         completionPercent: 100,
       },
     });
 
     await tx.selfInspectionStatusLog.create({
       data: {
-        selfInspectionId: inspection.id,
+        selfInspectionId: refreshed.id,
         previousStatus: editableInspection.status,
         nextStatus: SelfInspectionStatus.SUBMITTED,
         note: "Autoinspeccion enviada por el cliente",
@@ -1623,6 +1438,9 @@ export async function reviewSelfInspection(id: string, input: unknown, actorId: 
   return getSelfInspectionById(id);
 }
 
+export type PublicSelfInspectionStartPageData = Awaited<
+  ReturnType<typeof getPublicSelfInspectionStartPageData>
+>;
 export type PublicSelfInspectionWizardData = Awaited<
   ReturnType<typeof getPublicSelfInspectionWizard>
 >;

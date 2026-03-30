@@ -14,11 +14,11 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-[#5b3fa6]" htmlFor="email">
+        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="email">
           Correo
         </label>
         <Input
-          className="border-[#d8c5ff] bg-white/95 focus:border-[#7c3aed] focus:ring-[rgba(124,58,237,0.16)]"
+          className="bg-white/95"
           defaultValue="admin@mecaniaos.local"
           id="email"
           name="email"
@@ -27,11 +27,11 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-[#5b3fa6]" htmlFor="password">
+        <label className="text-sm font-medium text-[color:var(--muted-strong)]" htmlFor="password">
           Contrasena
         </label>
         <Input
-          className="border-[#d8c5ff] bg-white/95 focus:border-[#7c3aed] focus:ring-[rgba(124,58,237,0.16)]"
+          className="bg-white/95"
           defaultValue="Admin1234!"
           id="password"
           name="password"
@@ -42,7 +42,7 @@ export function LoginForm() {
       <FormMessage message={state.error} />
 
       <SubmitButton
-        className="w-full bg-[#7c3aed] shadow-[0_16px_34px_rgba(124,58,237,0.26)] hover:bg-[#6d28d9] focus-visible:ring-[rgba(124,58,237,0.2)]"
+        className="w-full"
         label="Entrar al taller"
         pendingLabel="Ingresando..."
       />

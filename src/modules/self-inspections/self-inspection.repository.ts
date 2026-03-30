@@ -239,6 +239,13 @@ export const selfInspectionRepository = {
     });
   },
 
+  findPublicById(id: string) {
+    return prisma.selfInspection.findUnique({
+      where: { id },
+      include: publicWizardInclude,
+    });
+  },
+
   findSummaryById(id: string) {
     return prisma.selfInspection.findUnique({
       where: { id },
@@ -249,15 +256,6 @@ export const selfInspectionRepository = {
         answers: true,
         photos: true,
         notes: true,
-      },
-    });
-  },
-
-  findVehicleForCustomer(customerId: string, vehicleId: string) {
-    return prisma.vehicle.findFirst({
-      where: {
-        id: vehicleId,
-        clientId: customerId,
       },
     });
   },
