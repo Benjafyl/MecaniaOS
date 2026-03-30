@@ -17,7 +17,7 @@ import {
 import { hash } from "bcryptjs";
 import { createHash } from "node:crypto";
 
-const prisma = new PrismaClient();
+  const prisma = new PrismaClient();
 
 function hashAccessToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -41,6 +41,7 @@ async function main() {
 
   const adminPassword = await hash("Admin1234!", 10);
   const mechanicPassword = await hash("Mechanic1234!", 10);
+  const customerPassword = await hash("Cliente1234!", 10);
 
   const [admin, mechanic] = await Promise.all([
     prisma.user.create({
@@ -78,6 +79,20 @@ async function main() {
       phone: "+56 9 5555 2222",
       email: "juan@example.com",
       address: "Pasaje Mecanica 220, Santiago",
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      name: clientA.fullName,
+      email: "maria@example.com",
+      passwordHash: customerPassword,
+      role: UserRole.CUSTOMER,
+      client: {
+        connect: {
+          id: clientA.id,
+        },
+      },
     },
   });
 
@@ -510,6 +525,7 @@ async function main() {
   console.log("Seed listo");
   console.log(`Admin: admin@mecaniaos.local / Admin1234!`);
   console.log(`Mecanico: mecanico@mecaniaos.local / Mechanic1234!`);
+  console.log(`Cliente: maria@example.com / Cliente1234!`);
   console.log(`Orden activa de referencia: ${workOrderA.orderNumber}`);
   console.log(`Autoinspeccion borrador: ${selfInspectionDraft.id}`);
   console.log(`Enlace seguro demo: /self-inspections/start/${publicDraftToken}`);

@@ -18,6 +18,7 @@ export const authRepository = {
             email: true,
             role: true,
             active: true,
+            clientId: true,
           },
         },
       },

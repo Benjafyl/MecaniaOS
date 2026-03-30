@@ -57,9 +57,37 @@ export const userRepository = {
     email: string;
     passwordHash: string;
     role: UserRole;
+    clientId?: string;
   }) {
     return prisma.user.create({
-      data,
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash: data.passwordHash,
+        role: data.role,
+        ...(data.clientId
+          ? {
+              client: {
+                connect: {
+                  id: data.clientId,
+                },
+              },
+            }
+          : {}),
+      },
+    });
+  },
+
+  linkClient(id: string, clientId: string) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        client: {
+          connect: {
+            id: clientId,
+          },
+        },
+      },
     });
   },
 

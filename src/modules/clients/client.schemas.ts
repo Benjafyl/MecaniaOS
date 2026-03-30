@@ -8,6 +8,7 @@ export const createClientSchema = z.object({
   phone: requiredText(6, 32),
   email: z.email().trim(),
   address: optionalText(255),
+  portalPassword: optionalText(128),
 });
 
 export const updateClientSchema = createClientSchema.partial().refine(

@@ -1,4 +1,8 @@
-import { NotFoundError } from "@/lib/errors";
+import { hash } from "bcryptjs";
+import { UserRole } from "@prisma/client";
+
+import { ConflictError, NotFoundError } from "@/lib/errors";
+import { userRepository } from "@/modules/users/user.repository";
 import { clientRepository } from "@/modules/clients/client.repository";
 import {
   createClientSchema,
@@ -21,14 +25,35 @@ export async function getClientById(id: string) {
 
 export async function createClient(input: unknown) {
   const data = createClientSchema.parse(input);
+  const email = data.email.toLowerCase();
 
-  return clientRepository.create({
+  if (data.portalPassword) {
+    const existingUser = await userRepository.findByEmail(email);
+
+    if (existingUser) {
+      throw new ConflictError("Ya existe un usuario con ese correo");
+    }
+  }
+
+  const client = await clientRepository.create({
     fullName: data.fullName,
     localIdentifier: data.localIdentifier,
     phone: data.phone,
-    email: data.email.toLowerCase(),
+    email,
     address: data.address,
   });
+
+  if (data.portalPassword) {
+    await userRepository.create({
+      name: data.fullName,
+      email,
+      passwordHash: await hash(data.portalPassword, 10),
+      role: UserRole.CUSTOMER,
+      clientId: client.id,
+    });
+  }
+
+  return client;
 }
 
 export async function updateClient(id: string, input: unknown) {

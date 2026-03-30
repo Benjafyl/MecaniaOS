@@ -7,8 +7,8 @@ import { LoginForm } from "@/app/login/login-form";
 export default async function LoginPage() {
   const session = await getCurrentSession();
 
-  if (session && session.user.role !== UserRole.CUSTOMER) {
-    redirect("/dashboard");
+  if (session) {
+    redirect(session.user.role === UserRole.CUSTOMER ? "/portal" : "/dashboard");
   }
 
   return (
@@ -28,7 +28,7 @@ export default async function LoginPage() {
             <div>
               <p className="text-sm font-semibold text-[color:var(--foreground)]">MecaniaOS</p>
               <p className="text-xs uppercase tracking-[0.22em] text-[#5f7fa8]">
-                Acceso interno
+                Acceso seguro
               </p>
             </div>
           </div>
@@ -67,6 +67,16 @@ export default async function LoginPage() {
                 </div>
                 <p className="rounded-full border border-[rgba(37,99,235,0.12)] bg-white px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
                   Mechanic1234!
+                </p>
+              </div>
+
+              <div className="flex items-start justify-between gap-4 py-3 last:pb-0">
+                <div>
+                  <p className="text-sm font-semibold text-[color:var(--foreground)]">Cliente</p>
+                  <p className="mt-1 text-sm text-[color:var(--muted-strong)]">maria@example.com</p>
+                </div>
+                <p className="rounded-full border border-[rgba(37,99,235,0.12)] bg-white px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
+                  Cliente1234!
                 </p>
               </div>
             </div>

@@ -55,6 +55,7 @@ export async function signIn(input: unknown) {
     name: user.name,
     email: user.email,
     role: user.role,
+    clientId: user.clientId,
   };
 }
 
@@ -91,6 +92,10 @@ export async function requireApiUser(roles?: UserRole[]) {
   }
 
   return session;
+}
+
+export async function requireCustomerUser() {
+  return requireApiUser([UserRole.CUSTOMER]);
 }
 
 export async function signOut() {
