@@ -18,10 +18,12 @@ export function LoginForm() {
           Correo
         </label>
         <Input
-          className="bg-white/95"
+          autoComplete="email"
+          className="min-h-12 rounded-2xl border-[rgba(15,23,42,0.08)] bg-[#f7f7f3] px-4 shadow-none focus:border-[#0f766e] focus:ring-[rgba(15,118,110,0.12)]"
           defaultValue="admin@mecaniaos.local"
           id="email"
           name="email"
+          placeholder="correo@empresa.com"
           type="email"
         />
       </div>
@@ -31,21 +33,27 @@ export function LoginForm() {
           Contrasena
         </label>
         <Input
-          className="bg-white/95"
+          autoComplete="current-password"
+          className="min-h-12 rounded-2xl border-[rgba(15,23,42,0.08)] bg-[#f7f7f3] px-4 shadow-none focus:border-[#0f766e] focus:ring-[rgba(15,118,110,0.12)]"
           defaultValue="Admin1234!"
           id="password"
           name="password"
+          placeholder="Tu contrasena"
           type="password"
         />
       </div>
 
-      <FormMessage message={state.error} />
+      <FormMessage className="rounded-2xl" message={state.error} />
 
       <SubmitButton
-        className="w-full"
-        label="Entrar al taller"
+        className="min-h-12 w-full rounded-2xl bg-[#0f172a] shadow-[0_18px_36px_rgba(15,23,42,0.18)] hover:bg-[#111827]"
+        label="Entrar"
         pendingLabel="Ingresando..."
       />
+
+      <p className="text-xs leading-5 text-[color:var(--muted)]">
+        Usa una cuenta interna para acceder a recepcion, ordenes de trabajo y seguimiento del taller.
+      </p>
     </form>
   );
 }
