@@ -135,6 +135,27 @@ pnpm db:seed
 pnpm dev
 ```
 
+## Ejecucion con Docker
+
+Para levantar la base de datos y la aplicacion completa con datos demo:
+
+```bash
+pnpm docker:stack:up
+```
+
+Esto:
+
+- inicia PostgreSQL en Docker.
+- crea el esquema de Prisma.
+- carga datos semilla para la demo.
+- levanta la aplicacion en `http://localhost:3000`.
+
+Para detener el stack:
+
+```bash
+pnpm docker:stack:down
+```
+
 ## Credenciales seed
 
 - Administrador: `admin@mecaniaos.local` / `Admin1234!`

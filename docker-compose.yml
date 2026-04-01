@@ -17,19 +17,63 @@ services:
       timeout: 5s
       retries: 20
 
-  app:
+  app-init:
     profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mecaniaos-app
+      args:
+        DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+        SESSION_SECRET: ${SESSION_SECRET}
+        APP_URL: http://localhost:3000
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+        SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-${SUPABASE_STORAGE_BUCKET:-self-inspections}}
+        SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-${SUPABASE_STORAGE_BUCKET:-work-order-evidences}}
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
       SESSION_SECRET: replace-this-with-a-long-random-secret-123
       APP_URL: http://localhost:3000
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-${SUPABASE_STORAGE_BUCKET:-self-inspections}}
+      SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-${SUPABASE_STORAGE_BUCKET:-work-order-evidences}}
+      NODE_ENV: production
+    command: sh -c "pnpm prisma db push --accept-data-loss && pnpm db:seed"
+    restart: "no"
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+        SESSION_SECRET: ${SESSION_SECRET}
+        APP_URL: http://localhost:3000
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+        SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-${SUPABASE_STORAGE_BUCKET:-self-inspections}}
+        SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-${SUPABASE_STORAGE_BUCKET:-work-order-evidences}}
+    container_name: mecaniaos-app
+    depends_on:
+      db:
+        condition: service_healthy
+      app-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
+      SESSION_SECRET: replace-this-with-a-long-random-secret-123
+      APP_URL: http://localhost:3000
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-${SUPABASE_STORAGE_BUCKET:-self-inspections}}
+      SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-${SUPABASE_STORAGE_BUCKET:-work-order-evidences}}
       NODE_ENV: production
     ports:
       - "3000:3000"

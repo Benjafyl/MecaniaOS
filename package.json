@@ -28,7 +28,9 @@
     "docker:db:down": "docker compose down",
     "docker:db:logs": "docker compose logs -f db",
     "docker:app:up": "docker compose --profile app up -d",
-    "docker:app:down": "docker compose --profile app down"
+    "docker:app:down": "docker compose --profile app down",
+    "docker:stack:up": "docker compose --profile app up -d",
+    "docker:stack:down": "docker compose --profile app down"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
