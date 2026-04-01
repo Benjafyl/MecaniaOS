@@ -39,6 +39,8 @@ import {
 } from "@/modules/self-inspections/self-inspection.constants";
 import {
   createSelfInspectionInviteSchema,
+  normalizePlate,
+  normalizeVin,
   publicSelfInspectionAccessSchema,
   reviewSelfInspectionSchema,
   selfInspectionFiltersSchema,
@@ -115,6 +117,15 @@ function isPendingInspectionCustomer(customer: {
   return (
     customer.localIdentifier?.startsWith(PENDING_SELF_INSPECTION_CLIENT_PREFIX) === true ||
     normalizeEmail(customer.email).endsWith(`@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`)
+  );
+}
+
+function shouldMaterializeInspectionVehicle(status: SelfInspectionStatus) {
+  return (
+    status === SelfInspectionStatus.IN_PROGRESS ||
+    status === SelfInspectionStatus.UNDER_REVIEW ||
+    status === SelfInspectionStatus.REVIEWED ||
+    status === SelfInspectionStatus.CONVERTED_TO_WORK_ORDER
   );
 }
 
@@ -264,6 +275,7 @@ function buildCustomerVehicleStepDraft(inspection: PublicInspectionEntity, answe
     phone: contact.phone,
     email: contact.email,
     plate: String(answersMap.vehicle_plate ?? snapshot?.plate ?? vehicle?.plate ?? ""),
+    vin: String(answersMap.vehicle_vin ?? snapshot?.vin ?? vehicle?.vin ?? ""),
     make: String(answersMap.vehicle_make ?? snapshot?.make ?? vehicle?.make ?? ""),
     model: String(answersMap.vehicle_model ?? snapshot?.model ?? vehicle?.model ?? ""),
     year: String(answersMap.vehicle_year ?? snapshot?.year ?? vehicle?.year ?? ""),
@@ -626,6 +638,212 @@ async function claimPendingInspectionCustomer(
   return getPublicSelfInspectionEntityById(inspection.id);
 }
 
+function buildInspectionVehicleSyncPayload(
+  inspection: {
+    vehicle: {
+      id: string;
+      plate: string | null;
+      vin: string;
+      make: string;
+      model: string;
+      year: number;
+      color: string | null;
+      mileage: number | null;
+      fuelType: VehicleFuelType | null;
+      transmission: VehicleTransmissionType | null;
+    } | null;
+    vehicleSnapshot: {
+      plate: string | null;
+      vin: string | null;
+      make: string;
+      model: string;
+      year: number;
+      color: string | null;
+      mileage: number;
+      fuelType: VehicleFuelType;
+      transmission: VehicleTransmissionType;
+    } | null;
+  },
+  answersMap: AnswerMap,
+) {
+  if (!inspection.vehicleSnapshot) {
+    return null;
+  }
+
+  const plateSource = answersMap.vehicle_plate ?? inspection.vehicleSnapshot.plate ?? inspection.vehicle?.plate;
+  const vinSource = answersMap.vehicle_vin ?? inspection.vehicleSnapshot.vin ?? inspection.vehicle?.vin;
+  const make = String(
+    answersMap.vehicle_make ?? inspection.vehicleSnapshot.make ?? inspection.vehicle?.make ?? "",
+  ).trim();
+  const model = String(
+    answersMap.vehicle_model ?? inspection.vehicleSnapshot.model ?? inspection.vehicle?.model ?? "",
+  ).trim();
+  const year = Number(
+    answersMap.vehicle_year ?? inspection.vehicleSnapshot.year ?? inspection.vehicle?.year ?? NaN,
+  );
+  const mileage = Number(
+    answersMap.vehicle_mileage ??
+      inspection.vehicleSnapshot.mileage ??
+      inspection.vehicle?.mileage ??
+      NaN,
+  );
+  const vin =
+    typeof vinSource === "string" && vinSource.trim() !== "" ? normalizeVin(vinSource) : "";
+
+  if (!vin) {
+    throw new ConflictError(
+      "La autoinspeccion debe incluir el VIN antes de vincular el vehiculo al cliente",
+    );
+  }
+
+  if (!make || !model || !Number.isInteger(year) || !Number.isFinite(mileage)) {
+    throw new ConflictError(
+      "La autoinspeccion no tiene informacion suficiente para registrar el vehiculo",
+    );
+  }
+
+  return {
+    plate:
+      typeof plateSource === "string" && plateSource.trim() !== ""
+        ? normalizePlate(plateSource)
+        : null,
+    vin,
+    make,
+    model,
+    year,
+    color: inspection.vehicleSnapshot.color ?? inspection.vehicle?.color ?? null,
+    mileage,
+    fuelType:
+      inspection.vehicleSnapshot.fuelType ??
+      inspection.vehicle?.fuelType ??
+      VehicleFuelType.OTHER,
+    transmission:
+      inspection.vehicleSnapshot.transmission ??
+      inspection.vehicle?.transmission ??
+      VehicleTransmissionType.OTHER,
+  };
+}
+
+async function syncInspectionCustomerAndVehicle(
+  tx: Prisma.TransactionClient,
+  selfInspectionId: string,
+) {
+  const inspection = await tx.selfInspection.findUnique({
+    where: {
+      id: selfInspectionId,
+    },
+    include: {
+      customer: true,
+      vehicle: true,
+      vehicleSnapshot: true,
+      answers: {
+        select: {
+          questionKey: true,
+          answerValue: true,
+        },
+      },
+    },
+  });
+
+  if (!inspection || !inspection.vehicleSnapshot) {
+    return;
+  }
+
+  const answersMap = mapAnswersToRecord(inspection.answers);
+  const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
+  const vehiclePayload = buildInspectionVehicleSyncPayload(inspection, answersMap);
+
+  if (!vehiclePayload) {
+    return;
+  }
+
+  await tx.client.update({
+    where: {
+      id: inspection.customer.id,
+    },
+    data: {
+      fullName: contactSnapshot.fullName.trim(),
+      phone: contactSnapshot.phone.trim(),
+      email: normalizeEmail(contactSnapshot.email),
+    },
+  });
+
+  const [vehicleByVin, vehicleByPlate] = await Promise.all([
+    tx.vehicle.findUnique({
+      where: {
+        vin: vehiclePayload.vin,
+      },
+    }),
+    vehiclePayload.plate
+      ? tx.vehicle.findUnique({
+          where: {
+            plate: vehiclePayload.plate,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (vehicleByVin && vehicleByPlate && vehicleByVin.id !== vehicleByPlate.id) {
+    throw new ConflictError(
+      "Ya existen vehiculos distintos con ese VIN y esa patente. Revisa la ficha antes de continuar.",
+    );
+  }
+
+  const existingVehicle =
+    vehicleByVin ??
+    vehicleByPlate ??
+    (inspection.vehicle
+      ? await tx.vehicle.findUnique({
+          where: {
+            id: inspection.vehicle.id,
+          },
+        })
+      : null);
+
+  const vehicle = existingVehicle
+    ? await tx.vehicle.update({
+        where: {
+          id: existingVehicle.id,
+        },
+        data: {
+          clientId: inspection.customer.id,
+          ...vehiclePayload,
+        },
+      })
+    : await tx.vehicle.create({
+        data: {
+          clientId: inspection.customer.id,
+          ...vehiclePayload,
+        },
+      });
+
+  await tx.selfInspectionVehicleSnapshot.update({
+    where: {
+      selfInspectionId,
+    },
+    data: {
+      plate: vehiclePayload.plate,
+      vin: vehiclePayload.vin,
+      make: vehiclePayload.make,
+      model: vehiclePayload.model,
+      year: vehiclePayload.year,
+      color: vehiclePayload.color,
+      mileage: vehiclePayload.mileage,
+      fuelType: vehiclePayload.fuelType,
+      transmission: vehiclePayload.transmission,
+    },
+  });
+
+  await tx.selfInspection.update({
+    where: {
+      id: selfInspectionId,
+    },
+    data: {
+      vehicleId: vehicle.id,
+    },
+  });
+}
+
 async function getPublicSelfInspectionEntity(token: string) {
   const inspection = await selfInspectionRepository.findByAccessTokenHash(hashAccessToken(token));
 
@@ -882,6 +1100,7 @@ function buildCustomerVehicleAnswerRecords(
     buildAnswerRecord("customer_phone", data.phone),
     buildAnswerRecord("customer_email", data.email.toLowerCase()),
     buildAnswerRecord("vehicle_plate", data.plate),
+    buildAnswerRecord("vehicle_vin", data.vin),
     buildAnswerRecord("vehicle_make", data.make),
     buildAnswerRecord("vehicle_model", data.model),
     buildAnswerRecord("vehicle_year", data.year),
@@ -1132,7 +1351,7 @@ export async function savePublicSelfInspectionVehicle(token: string, input: unkn
     create: {
       selfInspectionId: inspection.id,
       plate: data.plate,
-      vin: inspection.vehicleSnapshot?.vin ?? inspection.vehicle?.vin ?? null,
+      vin: data.vin,
       make: data.make,
       model: data.model,
       year: data.year,
@@ -1148,6 +1367,7 @@ export async function savePublicSelfInspectionVehicle(token: string, input: unkn
     },
     update: {
       plate: data.plate,
+      vin: data.vin,
       make: data.make,
       model: data.model,
       year: data.year,
@@ -1411,6 +1631,10 @@ export async function updateSelfInspectionStatus(id: string, input: unknown, act
       },
     });
 
+    if (shouldMaterializeInspectionVehicle(parsedStatus.status)) {
+      await syncInspectionCustomerAndVehicle(tx, id);
+    }
+
     await tx.selfInspectionStatusLog.create({
       data: {
         selfInspectionId: id,
@@ -1477,6 +1701,8 @@ export async function reviewSelfInspection(id: string, input: unknown, actorId: 
         overallRiskLevel: data.riskAssessment,
       },
     });
+
+    await syncInspectionCustomerAndVehicle(tx, id);
 
     await tx.selfInspectionStatusLog.create({
       data: {

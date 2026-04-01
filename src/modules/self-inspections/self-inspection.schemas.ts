@@ -57,6 +57,10 @@ export function normalizePlate(value: string) {
   return value.replace(/[\s-]/g, "").toUpperCase();
 }
 
+export function normalizeVin(value: string) {
+  return value.trim().toUpperCase();
+}
+
 export const plateSchema = z
   .string()
   .trim()
@@ -71,6 +75,7 @@ export const selfInspectionVehicleStepSchema = z.object({
   phone: requiredText(6, 32),
   email: z.email().trim(),
   plate: plateSchema,
+  vin: requiredText(8, 32).transform(normalizeVin),
   make: requiredText(1, 80),
   model: requiredText(1, 80),
   year: requiredInteger(1950, currentYear),
