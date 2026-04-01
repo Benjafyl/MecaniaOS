@@ -46,6 +46,7 @@ const validationPathLabels: Record<string, string> = {
   phone: "telefono",
   email: "correo",
   plate: "patente",
+  vin: "VIN",
   make: "marca",
   model: "modelo",
   year: "ano",
@@ -352,6 +353,13 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
                 disabled={isReadOnly}
                 onChange={(event) => updateCustomerVehicleField("plate", event.target.value)}
                 value={data.form.customerVehicle.plate}
+              />
+            </QuestionField>
+            <QuestionField label="VIN">
+              <Input
+                disabled={isReadOnly}
+                onChange={(event) => updateCustomerVehicleField("vin", event.target.value)}
+                value={data.form.customerVehicle.vin}
               />
             </QuestionField>
             <QuestionField label="Ano">
