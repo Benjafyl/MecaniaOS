@@ -214,6 +214,12 @@ export const SELF_INSPECTION_QUESTION_DEFINITIONS: Record<
     label: "Patente",
     answerType: SelfInspectionAnswerType.TEXT,
   },
+  vehicle_vin: {
+    key: "vehicle_vin",
+    section: "vehicle",
+    label: "VIN",
+    answerType: SelfInspectionAnswerType.TEXT,
+  },
   vehicle_make: {
     key: "vehicle_make",
     section: "vehicle",
@@ -287,6 +293,7 @@ export const SELF_INSPECTION_PUBLIC_QUESTION_KEYS = [
   "customer_phone",
   "customer_email",
   "vehicle_plate",
+  "vehicle_vin",
   "vehicle_make",
   "vehicle_model",
   "vehicle_year",
