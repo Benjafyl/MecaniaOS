@@ -19,6 +19,9 @@ Se adopta un **monolito modular** con `Next.js` como frontend y backend del MVP.
 - `work-orders`
 - `service-history`
 - `dashboard`
+- `self-inspections`
+- `inventory` (En curso - Sprint 2)
+- `quotes` (En curso - Sprint 2)
 
 ## Principios
 
@@ -58,9 +61,65 @@ Se adopta un **monolito modular** con `Next.js` como frontend y backend del MVP.
 
 ## Extensibilidad prevista
 
-Los siguientes modulos pueden agregarse sin reescribir los actuales:
+Los siguientes modulos pueden agregarse posteriormente:
 
-- `inventory`
-- `quotes`
-- `evidence`
+- `evidence` (integrado via storage de Self-Inspection)
 - `customer-portal`
+
+## Modelos y Relaciones (Sprint 2 - UML)
+
+### Diagrama Entidad-Relacion (Core y Sprint 2)
+
+```mermaid
+erDiagram
+    CLIENT ||--o{ VEHICLE : "owns"
+    VEHICLE ||--o{ WORK_ORDER : "has"
+    VEHICLE ||--o{ SELF_INSPECTION : "has"
+    CLIENT ||--o{ QUOTE : "requests"
+    VEHICLE ||--o{ QUOTE : "is for"
+    QUOTE ||--o{ QUOTE_ITEM : "contains"
+    QUOTE ||--o| WORK_ORDER : "generates"
+    QUOTE_ITEM }o--o| PART : "references"
+    WORK_ORDER ||--o{ PART_CONSUMPTION : "consumes"
+    PART_CONSUMPTION }o--|| PART : "reduces stock of"
+    
+    CLIENT {
+        string id PK
+        string name
+        string documentId
+    }
+    VEHICLE {
+        string id PK
+        string vin
+        string plate
+    }
+    WORK_ORDER {
+        string id PK
+        string status
+        string notes
+    }
+    QUOTE {
+        string id PK
+        string status
+        float totalAmount
+    }
+    PART {
+        string id PK
+        string name
+        int stock
+        int minStock
+    }
+```
+
+### Ciclo de Vida de Presupuestos (State Machine)
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT : Crear Presupuesto
+    DRAFT --> SENT : Enviar a Cliente/Aseguradora
+    SENT --> APPROVED : Cliente Aprueba
+    SENT --> REJECTED : Cliente Rechaza
+    APPROVED --> CONVERTED_TO_WORK_ORDER : Crear OT desde Presupuesto
+    REJECTED --> [*]
+    CONVERTED_TO_WORK_ORDER --> [*]
+```

@@ -39,14 +39,31 @@ Documentacion base:
 `-- README.md
 ```
 
-## Modulos implementados en Sprint 1
+## Módulos implementados en Sprint 1
 
-- Autenticacion
+- Autenticación
 - Clientes
-- Vehiculos
-- Ordenes de trabajo
-- Estados de reparacion
-- Historial tecnico
+- Vehículos
+- Órdenes de trabajo
+- Estados de reparación
+- Historial técnico
+- Inspección Autónoma (Self-Inspection)
+
+## Objetivos del Sprint 2 (En Desarrollo)
+
+**Módulo de Inventario:**
+- Control stock de repuestos (MOS-6)
+- Consulta de stock y alertas de mínimo (MOS-86)
+- Registro de ingreso por reposición (MOS-84)
+- Ajuste manual de inventario (MOS-87)
+- Descuento automático por OTs (MOS-85)
+
+**Módulo de Presupuestos:**
+- Generar presupuesto desglosado (MOS-7)
+- Enviar presupuesto a cliente/aseguradora (MOS-61)
+- Aprobar presupuesto (MOS-11)
+- Rechazar presupuesto (MOS-62)
+- Convertir en Orden de Trabajo (MOS-63)
 
 ## Variables de entorno
 

@@ -38,11 +38,23 @@
 - Bitacora de cambios de estado para trazabilidad.
 - Historial tecnico por vehiculo y VIN.
 
-### Fase 4. Complementos del MVP
+### Fase 4. Complementos del MVP (Sprint 2 - En Desarrollo)
 
-- Inventario simple de repuestos.
-- Cotizaciones asociadas a la orden.
-- Evidencias fotograficas.
+**Fase 4.1 Inventario de Repuestos**
+- Control de inventario de repuestos (MOS-17 / MOS-6).
+- Registro de ingresos de stock de repuestos (MOS-84).
+- Ajustes manuales justificados (MOS-87).
+- Consultas de disponibilidad y alertas de stock bajo (MOS-86).
+- Descuento automático por partes utilizadas en Orden de Trabajo (MOS-85).
+
+**Fase 4.2 Presupuestos / Cotizaciones**
+- Emisión de presupuesto asociado a orden/vehículo con desglose de mano de obra, repuestos y suministros (MOS-19 / MOS-7).
+- Envío de presupuesto al cliente o aseguradora (MOS-61).
+- Flujo de Aprobación (MOS-11) y Rechazo (MOS-62).
+- Conversión a Orden de Trabajo sin duplicar datos (MOS-63).
+
+**Fase 4.3 Expansión Futura**
+- Evidencias fotograficas (Integración completa desde Self-Inspection).
 - Portal cliente.
 
 ### Fase 5. Evolutivos
@@ -60,3 +72,4 @@
 - Ordenes de trabajo.
 - Estados de reparacion.
 - Historial tecnico.
+- Self-Inspection (Inspección Autónoma con enlace seguro).
