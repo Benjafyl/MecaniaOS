@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 
 type PublicLinkPanelProps = {
   publicUrl: string;
+  qrCodeDataUrl: string | null;
 };
 
-export function PublicLinkPanel({ publicUrl }: PublicLinkPanelProps) {
+export function PublicLinkPanel({ publicUrl, qrCodeDataUrl }: PublicLinkPanelProps) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
   async function handleCopy() {
@@ -26,11 +27,21 @@ export function PublicLinkPanel({ publicUrl }: PublicLinkPanelProps) {
       <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
         Enlace seguro recien generado
       </p>
+      {qrCodeDataUrl ? (
+        <div className="mt-3 flex justify-center rounded-[20px] border border-white/70 bg-white/90 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt="Codigo QR para abrir la autoinspeccion"
+            className="h-40 w-40 rounded-[16px]"
+            src={qrCodeDataUrl}
+          />
+        </div>
+      ) : null}
       <p className="mt-2 break-all text-sm font-semibold text-[color:var(--foreground)]">
         {publicUrl}
       </p>
       <p className="mt-2 text-xs text-[color:var(--muted-strong)]">
-        Puedes abrirlo tu mismo para simular al cliente o copiarlo y enviarlo.
+        Puedes abrirlo tu mismo para simular al cliente, escanear el QR o copiarlo y enviarlo.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-3">

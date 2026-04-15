@@ -13,8 +13,8 @@ export function InviteForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="rounded-[20px] border border-[rgba(14,79,82,0.14)] bg-[rgba(14,79,82,0.06)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
-        Genera un enlace en blanco y compartelo. El cliente se identifica cuando lo abre:
-        si ya tiene cuenta inicia sesion, y si no, la crea en ese momento.
+        Genera un enlace listo para compartir. Desde el detalle podras abrirlo, copiarlo y mostrar
+        el QR del flujo de autoinspeccion.
       </div>
 
       <FormMessage message={state.error} />

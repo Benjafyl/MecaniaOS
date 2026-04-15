@@ -1,9 +1,6 @@
 import {
   PrismaClient,
-  ReviewRecommendedNextStep,
   SelfInspectionAnswerType,
-  SelfInspectionDepartment,
-  SelfInspectionNoteType,
   SelfInspectionPhotoType,
   SelfInspectionReason,
   SelfInspectionRiskLevel,
@@ -12,15 +9,25 @@ import {
   UserRole,
   VehicleFuelType,
   VehicleTransmissionType,
-  WorkOrderStatus,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
-  const prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
 function hashAccessToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function createPendingClientDraft() {
+  const suffix = randomBytes(10).toString("hex");
+
+  return {
+    fullName: "Cliente por identificar",
+    phone: "",
+    email: `pending+self-inspection-${suffix}@self-inspection.pending.mecaniaos.local`,
+    localIdentifier: `SI_PENDING:${suffix}`,
+  };
 }
 
 async function main() {
@@ -41,9 +48,8 @@ async function main() {
 
   const adminPassword = await hash("Admin1234!", 10);
   const mechanicPassword = await hash("Mechanic1234!", 10);
-  const customerPassword = await hash("Cliente1234!", 10);
 
-  const [admin, mechanic] = await Promise.all([
+  await Promise.all([
     prisma.user.create({
       data: {
         name: "Tomas Herrera",
@@ -62,437 +68,159 @@ async function main() {
     }),
   ]);
 
-  const clientA = await prisma.client.create({
-    data: {
-      fullName: "Maria Gonzalez",
-      localIdentifier: "12.345.678-9",
-      phone: "+56 9 5555 1111",
-      email: "maria@example.com",
-      address: "Av. Los Talleres 145, Santiago",
-    },
+  const pendingClient = await prisma.client.create({
+    data: createPendingClientDraft(),
   });
 
-  const clientB = await prisma.client.create({
-    data: {
-      fullName: "Juan Perez",
-      localIdentifier: "9.876.543-2",
-      phone: "+56 9 5555 2222",
-      email: "juan@example.com",
-      address: "Pasaje Mecanica 220, Santiago",
-    },
-  });
-
-  await prisma.user.create({
-    data: {
-      name: clientA.fullName,
-      email: "maria@example.com",
-      passwordHash: customerPassword,
-      role: UserRole.CUSTOMER,
-      client: {
-        connect: {
-          id: clientA.id,
-        },
-      },
-    },
-  });
-
-  const vehicleA = await prisma.vehicle.create({
-    data: {
-      clientId: clientA.id,
-      plate: "LTDK21",
-      vin: "3VWFE21C04M000001",
-      make: "Volkswagen",
-      model: "Gol",
-      year: 2020,
-      color: "Blanco",
-      mileage: 58200,
-      fuelType: VehicleFuelType.GASOLINE,
-      transmission: VehicleTransmissionType.MANUAL,
-    },
-  });
-
-  const vehicleB = await prisma.vehicle.create({
-    data: {
-      clientId: clientB.id,
-      plate: "KJRT54",
-      vin: "1HGCM82633A000002",
-      make: "Honda",
-      model: "Civic",
-      year: 2018,
-      color: "Gris",
-      mileage: 91450,
-      fuelType: VehicleFuelType.GASOLINE,
-      transmission: VehicleTransmissionType.AUTOMATIC,
-    },
-  });
-
-  const workOrderA = await prisma.workOrder.create({
-    data: {
-      clientId: clientA.id,
-      vehicleId: vehicleA.id,
-      orderNumber: "OT-2026-0001",
-      reason: "Ruido en frenos delanteros",
-      initialDiagnosis: "Pastillas con desgaste avanzado",
-      status: WorkOrderStatus.IN_REPAIR,
-      intakeDate: new Date("2026-03-10T10:00:00.000Z"),
-      estimatedDate: new Date("2026-03-15T18:00:00.000Z"),
-      notes: "Revisar discos y liquido de frenos",
-      createdById: admin.id,
-      updatedById: mechanic.id,
-      assignedTechnicianId: mechanic.id,
-      statusLogs: {
-        create: [
-          {
-            previousStatus: null,
-            nextStatus: WorkOrderStatus.RECEIVED,
-            note: "Ingreso inicial del vehiculo",
-            changedById: admin.id,
-            changedAt: new Date("2026-03-10T10:00:00.000Z"),
-          },
-          {
-            previousStatus: WorkOrderStatus.RECEIVED,
-            nextStatus: WorkOrderStatus.IN_DIAGNOSIS,
-            note: "Inspeccion inicial",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-10T11:00:00.000Z"),
-          },
-          {
-            previousStatus: WorkOrderStatus.IN_DIAGNOSIS,
-            nextStatus: WorkOrderStatus.IN_REPAIR,
-            note: "Cliente aprueba reemplazo",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-11T09:00:00.000Z"),
-          },
-        ],
-      },
-    },
-  });
-
-  const workOrderB = await prisma.workOrder.create({
-    data: {
-      clientId: clientB.id,
-      vehicleId: vehicleB.id,
-      orderNumber: "OT-2026-0002",
-      reason: "Mantencion por kilometraje",
-      initialDiagnosis: "Cambio de aceite y filtros",
-      status: WorkOrderStatus.READY_FOR_DELIVERY,
-      intakeDate: new Date("2026-03-09T09:30:00.000Z"),
-      estimatedDate: new Date("2026-03-12T17:00:00.000Z"),
-      notes: "Incluye inspeccion general",
-      createdById: mechanic.id,
-      updatedById: mechanic.id,
-      assignedTechnicianId: mechanic.id,
-      statusLogs: {
-        create: [
-          {
-            previousStatus: null,
-            nextStatus: WorkOrderStatus.RECEIVED,
-            note: "Ingreso por mantencion",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-09T09:30:00.000Z"),
-          },
-          {
-            previousStatus: WorkOrderStatus.RECEIVED,
-            nextStatus: WorkOrderStatus.IN_REPAIR,
-            note: "Mantencion en proceso",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-09T12:00:00.000Z"),
-          },
-          {
-            previousStatus: WorkOrderStatus.IN_REPAIR,
-            nextStatus: WorkOrderStatus.READY_FOR_DELIVERY,
-            note: "Vehiculo listo",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-11T16:00:00.000Z"),
-          },
-        ],
-      },
-    },
-  });
-
-  await prisma.workOrderEvidence.createMany({
-    data: [
-      {
-        workOrderId: workOrderA.id,
-        uploadedById: mechanic.id,
-        fileUrl: "/next.svg",
-        storageKey: "seed/work-orders/ot-2026-0001-evidence-1",
-        fileName: "frenos-frontal.jpg",
-        mimeType: "image/jpeg",
-        sizeBytes: 123456,
-        note: "Desgaste visible en componentes delanteros",
-      },
-      {
-        workOrderId: workOrderB.id,
-        uploadedById: mechanic.id,
-        fileUrl: "/window.svg",
-        storageKey: "seed/work-orders/ot-2026-0002-evidence-1",
-        fileName: "mantencion-aceite.jpg",
-        mimeType: "image/jpeg",
-        sizeBytes: 123456,
-        note: "Registro visual del servicio de mantencion",
-      },
-    ],
-  });
-
-  const publicDraftToken = "demo-self-inspection-2026";
+  const publicDraftToken = "portal-cliente-hilux-rysb49";
 
   const selfInspectionDraft = await prisma.selfInspection.create({
     data: {
-      customerId: clientA.id,
-      vehicleId: vehicleA.id,
-      status: SelfInspectionStatus.IN_PROGRESS,
+      customerId: pendingClient.id,
+      status: SelfInspectionStatus.DRAFT,
       sourceChannel: SelfInspectionSource.SECURE_LINK,
       accessTokenHash: hashAccessToken(publicDraftToken),
-      accessTokenExpiresAt: new Date("2026-04-01T23:59:59.000Z"),
+      accessTokenExpiresAt: new Date("2027-04-30T23:59:59.000Z"),
       inspectionReason: SelfInspectionReason.STRANGE_NOISE,
-      mainComplaint: "Golpeteo delantero al pasar baches y ruido al frenar en baja velocidad",
-      canDrive: true,
+      mainComplaint: "Ruido intermitente en tren delantero al frenar y al pasar lomos de toro",
+      canDrive: null,
       startedAt: new Date("2026-03-15T12:00:00.000Z"),
-      overallRiskLevel: SelfInspectionRiskLevel.HIGH,
+      overallRiskLevel: SelfInspectionRiskLevel.LOW,
       summaryGenerated:
-        "Maria Gonzalez reporta ruido delantero al circular y al frenar. Vehiculo Volkswagen Gol LTDK21 con 58.200 km. Riesgo preliminar alto por vibraciones, alerta ABS y ruido de suspension.",
-      completionPercent: 80,
-      lastCompletedStep: 7,
+        "Benjamin Yañez agenda autoinspeccion para una Toyota Hilux blanca patente RY SB 49. El flujo queda listo para completar el ingreso previo desde el enlace seguro.",
+      completionPercent: 0,
+      lastCompletedStep: 0,
       vehicleSnapshot: {
         create: {
-          plate: vehicleA.plate,
-          vin: vehicleA.vin,
-          make: vehicleA.make,
-          model: vehicleA.model,
-          year: vehicleA.year,
-          color: vehicleA.color,
-          mileage: vehicleA.mileage ?? 0,
+          plate: "RY SB 49",
+          vin: "8AJBA3CD7GL184926",
+          make: "Toyota",
+          model: "Hilux",
+          year: 2021,
+          color: "Blanca",
+          mileage: 68420,
           fuelType: VehicleFuelType.GASOLINE,
           transmission: VehicleTransmissionType.MANUAL,
-          starts: true,
-        },
-      },
-      answers: {
-        create: [
-          {
-            section: "reason",
-            questionKey: "reason_problem_since",
-            questionLabel: "Desde cuando ocurre el problema",
-            answerType: SelfInspectionAnswerType.TEXT,
-            answerValue: "Hace 2 semanas",
-          },
-          {
-            section: "reason",
-            questionKey: "reason_issue_frequency",
-            questionLabel: "El problema es constante o intermitente",
-            answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-            answerValue: "INTERMITTENT",
-          },
-          {
-            section: "reason",
-            questionKey: "reason_can_drive",
-            questionLabel: "El vehiculo puede circular actualmente",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-          },
-          {
-            section: "brakes",
-            questionKey: "brakes_abs_warning",
-            questionLabel: "Se ha encendido luz de frenos o ABS",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-            severity: SelfInspectionRiskLevel.HIGH,
-          },
-          {
-            section: "steeringSuspension",
-            questionKey: "suspension_knocks",
-            questionLabel: "Escucha golpes al pasar lomos de toro o baches",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-          },
-          {
-            section: "tires",
-            questionKey: "tires_speed_vibration",
-            questionLabel: "Siente vibracion a cierta velocidad",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-            severity: SelfInspectionRiskLevel.HIGH,
-          },
-        ],
-      },
-      photos: {
-        create: [
-          {
-            photoType: SelfInspectionPhotoType.FRONTAL_FULL,
-            fileUrl: "/next.svg",
-            storageKey: "seed/self-inspections/front-01",
-            fileName: "frontal-demo.jpg",
-            mimeType: "image/jpeg",
-            sizeBytes: 123456,
-            sortOrder: 1,
-            isRequired: true,
-          },
-          {
-            photoType: SelfInspectionPhotoType.PRIMARY_DAMAGE,
-            fileUrl: "/window.svg",
-            storageKey: "seed/self-inspections/damage-01",
-            fileName: "dano-demo.jpg",
-            mimeType: "image/jpeg",
-            sizeBytes: 123456,
-            sortOrder: 11,
-            isRequired: true,
-          },
-        ],
-      },
-      notes: {
-        create: [
-          {
-            noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
-            content: "[[additionalProblemContext]] El ruido aumenta con el vehiculo cargado.",
-          },
-        ],
-      },
-      statusLogs: {
-        create: [
-          {
-            previousStatus: null,
-            nextStatus: SelfInspectionStatus.DRAFT,
-            note: "Autoinspeccion creada",
-            changedAt: new Date("2026-03-15T12:00:00.000Z"),
-          },
-          {
-            previousStatus: SelfInspectionStatus.DRAFT,
-            nextStatus: SelfInspectionStatus.IN_PROGRESS,
-            note: "Cliente avanzo en el formulario",
-            changedAt: new Date("2026-03-15T12:30:00.000Z"),
-          },
-        ],
-      },
-    },
-  });
-
-  const selfInspectionReviewed = await prisma.selfInspection.create({
-    data: {
-      customerId: clientB.id,
-      vehicleId: vehicleB.id,
-      workOrderId: workOrderB.id,
-      status: SelfInspectionStatus.REVIEWED,
-      sourceChannel: SelfInspectionSource.STAFF_ASSISTED,
-      inspectionReason: SelfInspectionReason.COLLISION_DAMAGE,
-      mainComplaint: "Golpe frontal con desalineacion visible y testigo de motor encendido",
-      canDrive: false,
-      startedAt: new Date("2026-03-12T09:00:00.000Z"),
-      submittedAt: new Date("2026-03-12T10:15:00.000Z"),
-      reviewedAt: new Date("2026-03-12T12:00:00.000Z"),
-      reviewerId: mechanic.id,
-      overallRiskLevel: SelfInspectionRiskLevel.CRITICAL,
-      summaryGenerated:
-        "Juan Perez reporta siniestro frontal reciente. Vehiculo Honda Civic KJRT54 no circulable, con posible afectacion estructural y luz de motor encendida. Riesgo critico y derivacion a carroceria y diagnostico mecanico.",
-      completionPercent: 100,
-      lastCompletedStep: 9,
-      vehicleSnapshot: {
-        create: {
-          plate: vehicleB.plate,
-          vin: vehicleB.vin,
-          make: vehicleB.make,
-          model: vehicleB.model,
-          year: vehicleB.year,
-          color: vehicleB.color,
-          mileage: vehicleB.mileage ?? 0,
-          fuelType: VehicleFuelType.GASOLINE,
-          transmission: VehicleTransmissionType.AUTOMATIC,
           starts: false,
         },
       },
       answers: {
         create: [
           {
-            section: "reason",
+            section: "customerVehicle",
+            questionKey: "customer_full_name",
+            questionLabel: "Nombre completo",
+            answerType: SelfInspectionAnswerType.TEXT,
+            answerValue: "Benjamin Yañez",
+          },
+          {
+            section: "customerVehicle",
+            questionKey: "customer_phone",
+            questionLabel: "Telefono",
+            answerType: SelfInspectionAnswerType.TEXT,
+            answerValue: "+56 9 5555 4949",
+          },
+          {
+            section: "customerVehicle",
+            questionKey: "customer_email",
+            questionLabel: "Correo",
+            answerType: SelfInspectionAnswerType.TEXT,
+            answerValue: "benjamin.yanez@cliente.mecaniaos.cl",
+          },
+          {
+            section: "problem",
+            questionKey: "reason_problem_type",
+            questionLabel: "Tipo de problema",
+            answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+            answerValue: "STEERING_SUSPENSION",
+            severity: SelfInspectionRiskLevel.HIGH,
+          },
+          {
+            section: "problem",
+            questionKey: "vehicle_starts",
+            questionLabel: "El vehiculo enciende",
+            answerType: SelfInspectionAnswerType.BOOLEAN,
+            answerValue: true,
+          },
+          {
+            section: "problem",
             questionKey: "reason_can_drive",
             questionLabel: "El vehiculo puede circular actualmente",
             answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: false,
-            severity: SelfInspectionRiskLevel.CRITICAL,
+            answerValue: true,
           },
           {
-            section: "operational",
-            questionKey: "operational_dashboard_warning_lights",
-            questionLabel: "Tiene testigos encendidos en el tablero",
+            section: "problem",
+            questionKey: "reason_warning_lights",
+            questionLabel: "Hay luces de advertencia encendidas",
             answerType: SelfInspectionAnswerType.BOOLEAN,
             answerValue: true,
             severity: SelfInspectionRiskLevel.HIGH,
           },
           {
-            section: "engine",
-            questionKey: "engine_check_engine_light",
-            questionLabel: "Se ha encendido luz de check engine",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-            severity: SelfInspectionRiskLevel.HIGH,
+            section: "problem",
+            questionKey: "reason_problem_since",
+            questionLabel: "Desde cuando comenzo el problema",
+            answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+            answerValue: "WEEKS",
           },
           {
-            section: "damage",
-            questionKey: "damage_recent_collision",
-            questionLabel: "El vehiculo sufrio choque o roce reciente",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-            severity: SelfInspectionRiskLevel.HIGH,
+            section: "problem",
+            questionKey: "reason_issue_frequency",
+            questionLabel: "El problema es constante o intermitente",
+            answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+            answerValue: "INTERMITTENT",
           },
           {
-            section: "damage",
-            questionKey: "damage_structural_impact",
-            questionLabel: "Se observa posible golpe estructural",
-            answerType: SelfInspectionAnswerType.BOOLEAN,
-            answerValue: true,
-            severity: SelfInspectionRiskLevel.CRITICAL,
+            section: "problem",
+            questionKey: "reason_problem_description",
+            questionLabel: "Descripcion breve del problema",
+            answerType: SelfInspectionAnswerType.LONG_TEXT,
+            answerValue: "Ruido intermitente en tren delantero al frenar y al pasar lomos de toro",
           },
         ],
       },
       photos: {
         create: [
           {
-            photoType: SelfInspectionPhotoType.FRONTAL_FULL,
-            fileUrl: "/next.svg",
-            storageKey: "seed/self-inspections/front-02",
-            fileName: "frontal-golpe.jpg",
-            mimeType: "image/jpeg",
-            sizeBytes: 123456,
+            photoType: SelfInspectionPhotoType.PRIMARY_DAMAGE,
+            fileUrl: "/demo/hilux-problema.webp",
+            storageKey: "seed/self-inspections/portal-cliente-hilux-rysb49-primary-damage",
+            fileName: "hilux-problema.webp",
+            mimeType: "image/webp",
+            sizeBytes: 93630,
             sortOrder: 1,
             isRequired: true,
           },
           {
             photoType: SelfInspectionPhotoType.DAMAGE_CONTEXT,
-            fileUrl: "/window.svg",
-            storageKey: "seed/self-inspections/context-02",
-            fileName: "contexto-golpe.jpg",
+            fileUrl: "/demo/hilux-contexto.jpg",
+            storageKey: "seed/self-inspections/portal-cliente-hilux-rysb49-damage-context",
+            fileName: "hilux-contexto.jpg",
             mimeType: "image/jpeg",
-            sizeBytes: 123456,
-            sortOrder: 12,
-            isRequired: true,
-          },
-        ],
-      },
-      notes: {
-        create: [
-          {
-            noteType: SelfInspectionNoteType.CUSTOMER_OBSERVATION,
-            content: "[[additionalProblemContext]] El cliente indica que el capot no cierra bien tras el choque.",
+            sizeBytes: 11432,
+            sortOrder: 2,
+            isRequired: false,
           },
           {
-            noteType: SelfInspectionNoteType.INTERNAL_REVIEW,
-            content: "Revisar soporte frontal, radiador y alineacion estructural antes de mover.",
-            createdById: mechanic.id,
+            photoType: SelfInspectionPhotoType.DASHBOARD_ON,
+            fileUrl: "/demo/hilux-tablero.jpg",
+            storageKey: "seed/self-inspections/portal-cliente-hilux-rysb49-dashboard",
+            fileName: "hilux-tablero.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 22998,
+            sortOrder: 3,
+            isRequired: false,
           },
-        ],
-      },
-      reviews: {
-        create: [
           {
-            reviewedById: mechanic.id,
-            riskAssessment: SelfInspectionRiskLevel.CRITICAL,
-            internalSummary:
-              "Golpe frontal con posible dano estructural. Vehiculo no apto para circular. Requiere ingreso con grua y diagnostico mixto mecanica/carroceria.",
-            recommendedNextStep: ReviewRecommendedNextStep.REFER_BODY_PAINT,
-            departmentSuggestion: SelfInspectionDepartment.BODY_PAINT,
-            createWorkOrderSuggestion: true,
-            createQuoteSuggestion: true,
-            reviewedAt: new Date("2026-03-12T12:00:00.000Z"),
+            photoType: SelfInspectionPhotoType.FRONTAL_FULL,
+            fileUrl: "/demo/hilux-completa.jpeg",
+            storageKey: "seed/self-inspections/portal-cliente-hilux-rysb49-vehicle-full",
+            fileName: "hilux-completa.jpeg",
+            mimeType: "image/jpeg",
+            sizeBytes: 208471,
+            sortOrder: 4,
+            isRequired: false,
           },
         ],
       },
@@ -501,21 +229,8 @@ async function main() {
           {
             previousStatus: null,
             nextStatus: SelfInspectionStatus.DRAFT,
-            note: "Autoinspeccion creada",
-            changedAt: new Date("2026-03-12T09:00:00.000Z"),
-          },
-          {
-            previousStatus: SelfInspectionStatus.DRAFT,
-            nextStatus: SelfInspectionStatus.SUBMITTED,
-            note: "Autoinspeccion enviada por cliente",
-            changedAt: new Date("2026-03-12T10:15:00.000Z"),
-          },
-          {
-            previousStatus: SelfInspectionStatus.SUBMITTED,
-            nextStatus: SelfInspectionStatus.REVIEWED,
-            note: "Revision interna registrada",
-            changedById: mechanic.id,
-            changedAt: new Date("2026-03-12T12:00:00.000Z"),
+            note: "Autoinspeccion creada y lista para compartir",
+            changedAt: new Date("2026-03-15T12:00:00.000Z"),
           },
         ],
       },
@@ -525,11 +240,8 @@ async function main() {
   console.log("Seed listo");
   console.log(`Admin: admin@mecaniaos.local / Admin1234!`);
   console.log(`Mecanico: mecanico@mecaniaos.local / Mechanic1234!`);
-  console.log(`Cliente: maria@example.com / Cliente1234!`);
-  console.log(`Orden activa de referencia: ${workOrderA.orderNumber}`);
   console.log(`Autoinspeccion borrador: ${selfInspectionDraft.id}`);
-  console.log(`Enlace seguro demo: /self-inspections/start/${publicDraftToken}`);
-  console.log(`Autoinspeccion revisada: ${selfInspectionReviewed.id}`);
+  console.log(`Enlace seguro: /self-inspections/start/${publicDraftToken}`);
 }
 
 main()

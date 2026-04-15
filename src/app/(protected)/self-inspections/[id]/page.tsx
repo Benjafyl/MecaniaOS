@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
 
 import { PublicLinkPanel } from "@/app/(protected)/self-inspections/public-link-panel";
 import { ReviewForm } from "@/app/(protected)/self-inspections/review-form";
@@ -51,6 +52,13 @@ export default async function SelfInspectionDetailPage({
     requestHeaders.get("x-forwarded-proto") ?? (env.NODE_ENV === "production" ? "https" : "http");
   const appOrigin = host ? `${protocol}://${host}` : env.APP_URL;
   const publicUrl = token ? `${appOrigin}/self-inspections/start/${token}` : null;
+  const qrCodeDataUrl = publicUrl
+    ? await QRCode.toDataURL(publicUrl, {
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 220,
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -77,7 +85,7 @@ export default async function SelfInspectionDetailPage({
             </p>
           </div>
 
-          {publicUrl ? <PublicLinkPanel publicUrl={publicUrl} /> : null}
+          {publicUrl ? <PublicLinkPanel publicUrl={publicUrl} qrCodeDataUrl={qrCodeDataUrl} /> : null}
         </div>
       </Card>
 

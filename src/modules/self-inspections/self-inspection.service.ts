@@ -2,6 +2,7 @@ import {
   Prisma,
   SelfInspectionAnswerType,
   SelfInspectionNoteType,
+  SelfInspectionPhotoType,
   SelfInspectionReason,
   SelfInspectionRiskLevel,
   SelfInspectionStatus,
@@ -19,6 +20,7 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from "@/lib/errors";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession, signIn, signOut } from "@/modules/auth/auth.service";
 import {
@@ -79,6 +81,24 @@ const FINAL_COMMENT_NOTE_TYPE = SelfInspectionNoteType.CUSTOMER_OBSERVATION;
 const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SI_PENDING";
 const PENDING_SELF_INSPECTION_CLIENT_NAME = "Cliente por identificar";
 const PENDING_SELF_INSPECTION_EMAIL_DOMAIN = "self-inspection.pending.mecaniaos.local";
+const DEMO_SELF_INSPECTION_CONTACT = {
+  fullName: "Benjamin Yañez",
+  phone: "+56 9 5555 4949",
+  email: "benjamin.yanez@cliente.mecaniaos.cl",
+};
+const DEMO_SELF_INSPECTION_VEHICLE = {
+  plate: "RY SB 49",
+  vin: "8AJBA3CD7GL184926",
+  make: "Toyota",
+  model: "Hilux",
+  year: 2021,
+  color: "Blanca",
+  mileage: 68420,
+  fuelType: VehicleFuelType.GASOLINE,
+  transmission: VehicleTransmissionType.MANUAL,
+};
+const DEMO_SELF_INSPECTION_DESCRIPTION =
+  "Ruido intermitente en tren delantero al frenar y al pasar lomos de toro.";
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
@@ -108,6 +128,10 @@ function createPendingClientDraft() {
     email: `pending+self-inspection-${suffix}@${PENDING_SELF_INSPECTION_EMAIL_DOMAIN}`,
     localIdentifier: `${PENDING_SELF_INSPECTION_CLIENT_PREFIX}:${suffix}`,
   };
+}
+
+function isDemoModeEnabled() {
+  return env.DEMO_MODE;
 }
 
 function isPendingInspectionCustomer(customer: {
@@ -872,6 +896,10 @@ async function getAuthorizedPublicSelfInspectionEntity(token: string) {
   const inspection = await getPublicSelfInspectionEntity(token);
   const session = await getCurrentSession();
 
+  if (isDemoModeEnabled()) {
+    return inspection;
+  }
+
   if (!session) {
     throw new UnauthorizedError("Inicia sesion para continuar con la autoinspeccion");
   }
@@ -1230,6 +1258,140 @@ export async function createSelfInspectionInvite(input: unknown) {
         status: SelfInspectionStatus.DRAFT,
         lastCompletedStep: 0,
         completionPercent: 0,
+        mainComplaint: isDemoModeEnabled() ? DEMO_SELF_INSPECTION_DESCRIPTION : null,
+        canDrive: null,
+        vehicleSnapshot: isDemoModeEnabled()
+          ? {
+              create: {
+                ...DEMO_SELF_INSPECTION_VEHICLE,
+                starts: false,
+              },
+            }
+          : undefined,
+        answers: isDemoModeEnabled()
+          ? {
+              create: [
+                {
+                  section: "customerVehicle",
+                  questionKey: "customer_full_name",
+                  questionLabel: "Nombre completo",
+                  answerType: SelfInspectionAnswerType.TEXT,
+                  answerValue: DEMO_SELF_INSPECTION_CONTACT.fullName,
+                },
+                {
+                  section: "customerVehicle",
+                  questionKey: "customer_phone",
+                  questionLabel: "Telefono",
+                  answerType: SelfInspectionAnswerType.TEXT,
+                  answerValue: DEMO_SELF_INSPECTION_CONTACT.phone,
+                },
+                {
+                  section: "customerVehicle",
+                  questionKey: "customer_email",
+                  questionLabel: "Correo",
+                  answerType: SelfInspectionAnswerType.TEXT,
+                  answerValue: DEMO_SELF_INSPECTION_CONTACT.email,
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_problem_type",
+                  questionLabel: "Tipo de problema",
+                  answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+                  answerValue: "STEERING_SUSPENSION",
+                  severity: SelfInspectionRiskLevel.HIGH,
+                },
+                {
+                  section: "problem",
+                  questionKey: "vehicle_starts",
+                  questionLabel: "El vehiculo enciende",
+                  answerType: SelfInspectionAnswerType.BOOLEAN,
+                  answerValue: true,
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_can_drive",
+                  questionLabel: "El vehiculo puede circular actualmente",
+                  answerType: SelfInspectionAnswerType.BOOLEAN,
+                  answerValue: true,
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_warning_lights",
+                  questionLabel: "Hay luces de advertencia encendidas",
+                  answerType: SelfInspectionAnswerType.BOOLEAN,
+                  answerValue: true,
+                  severity: SelfInspectionRiskLevel.HIGH,
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_problem_since",
+                  questionLabel: "Desde cuando comenzo el problema",
+                  answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+                  answerValue: "WEEKS",
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_issue_frequency",
+                  questionLabel: "El problema es constante o intermitente",
+                  answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
+                  answerValue: "INTERMITTENT",
+                },
+                {
+                  section: "problem",
+                  questionKey: "reason_problem_description",
+                  questionLabel: "Descripcion breve del problema",
+                  answerType: SelfInspectionAnswerType.LONG_TEXT,
+                  answerValue: DEMO_SELF_INSPECTION_DESCRIPTION,
+                },
+              ],
+            }
+          : undefined,
+        photos: isDemoModeEnabled()
+          ? {
+              create: [
+                {
+                  photoType: SelfInspectionPhotoType.PRIMARY_DAMAGE,
+                  fileUrl: "/demo/hilux-problema.webp",
+                  storageKey: `seed/self-inspections/${rawToken}-primary-damage`,
+                  fileName: "hilux-problema.webp",
+                  mimeType: "image/webp",
+                  sizeBytes: 93630,
+                  sortOrder: 1,
+                  isRequired: true,
+                },
+                {
+                  photoType: SelfInspectionPhotoType.DAMAGE_CONTEXT,
+                  fileUrl: "/demo/hilux-contexto.jpg",
+                  storageKey: `seed/self-inspections/${rawToken}-damage-context`,
+                  fileName: "hilux-contexto.jpg",
+                  mimeType: "image/jpeg",
+                  sizeBytes: 11432,
+                  sortOrder: 2,
+                  isRequired: false,
+                },
+                {
+                  photoType: SelfInspectionPhotoType.DASHBOARD_ON,
+                  fileUrl: "/demo/hilux-tablero.jpg",
+                  storageKey: `seed/self-inspections/${rawToken}-dashboard`,
+                  fileName: "hilux-tablero.jpg",
+                  mimeType: "image/jpeg",
+                  sizeBytes: 22998,
+                  sortOrder: 3,
+                  isRequired: false,
+                },
+                {
+                  photoType: SelfInspectionPhotoType.FRONTAL_FULL,
+                  fileUrl: "/demo/hilux-completa.jpeg",
+                  storageKey: `seed/self-inspections/${rawToken}-vehicle-full`,
+                  fileName: "hilux-completa.jpeg",
+                  mimeType: "image/jpeg",
+                  sizeBytes: 208471,
+                  sortOrder: 4,
+                  isRequired: false,
+                },
+              ],
+            }
+          : undefined,
       },
     });
 
@@ -1264,9 +1426,9 @@ export async function createSelfInspectionInvite(input: unknown) {
 export async function getPublicSelfInspectionStartPageData(token: string) {
   let inspection = await getPublicSelfInspectionEntity(token);
   const session = await getCurrentSession();
-  const authorized = canSessionAccessInspection(session, inspection);
+  const authorized = isDemoModeEnabled() ? true : canSessionAccessInspection(session, inspection);
 
-  if (authorized && session?.user.role === UserRole.CUSTOMER) {
+  if (!isDemoModeEnabled() && authorized && session?.user.role === UserRole.CUSTOMER) {
     inspection = await claimPendingInspectionCustomer(inspection, session);
   }
 
@@ -1344,39 +1506,74 @@ export async function savePublicSelfInspectionVehicle(token: string, input: unkn
   const inspection = await assertInspectionCustomerEditableByToken(token);
   const data = selfInspectionVehicleStepSchema.parse(input);
 
-  await prisma.selfInspectionVehicleSnapshot.upsert({
-    where: {
-      selfInspectionId: inspection.id,
-    },
-    create: {
-      selfInspectionId: inspection.id,
-      plate: data.plate,
-      vin: data.vin,
-      make: data.make,
-      model: data.model,
-      year: data.year,
-      color: inspection.vehicleSnapshot?.color ?? inspection.vehicle?.color ?? null,
-      mileage: data.mileage,
-      fuelType:
-        inspection.vehicleSnapshot?.fuelType ?? inspection.vehicle?.fuelType ?? VehicleFuelType.OTHER,
-      transmission:
-        inspection.vehicleSnapshot?.transmission ??
-        inspection.vehicle?.transmission ??
-        VehicleTransmissionType.OTHER,
-      starts: inspection.vehicleSnapshot?.starts ?? true,
-    },
-    update: {
-      plate: data.plate,
-      vin: data.vin,
-      make: data.make,
-      model: data.model,
-      year: data.year,
-      mileage: data.mileage,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.selfInspectionVehicleSnapshot.upsert({
+      where: {
+        selfInspectionId: inspection.id,
+      },
+      create: {
+        selfInspectionId: inspection.id,
+        plate: data.plate,
+        vin: data.vin,
+        make: data.make,
+        model: data.model,
+        year: data.year,
+        color: inspection.vehicleSnapshot?.color ?? inspection.vehicle?.color ?? null,
+        mileage: data.mileage,
+        fuelType:
+          inspection.vehicleSnapshot?.fuelType ?? inspection.vehicle?.fuelType ?? VehicleFuelType.OTHER,
+        transmission:
+          inspection.vehicleSnapshot?.transmission ??
+          inspection.vehicle?.transmission ??
+          VehicleTransmissionType.OTHER,
+        starts: inspection.vehicleSnapshot?.starts ?? true,
+      },
+      update: {
+        plate: data.plate,
+        vin: data.vin,
+        make: data.make,
+        model: data.model,
+        year: data.year,
+        mileage: data.mileage,
+      },
+    });
+
+    await tx.selfInspectionAnswer.deleteMany({
+      where: {
+        selfInspectionId: inspection.id,
+        questionKey: {
+          notIn: [...SELF_INSPECTION_PUBLIC_QUESTION_KEYS],
+        },
+      },
+    });
+
+    await Promise.all(
+      buildCustomerVehicleAnswerRecords(data).map((answer) =>
+        tx.selfInspectionAnswer.upsert({
+          where: {
+            selfInspectionId_questionKey: {
+              selfInspectionId: inspection.id,
+              questionKey: answer.questionKey,
+            },
+          },
+          update: {
+            answerValue: answer.answerValue,
+            answerType: answer.answerType,
+            questionLabel: answer.questionLabel,
+            section: answer.section,
+            severity: answer.severity,
+          },
+          create: {
+            selfInspectionId: inspection.id,
+            ...answer,
+          },
+        }),
+      ),
+    );
+
+    await syncInspectionCustomerAndVehicle(tx, inspection.id);
   });
 
-  await deleteDeprecatedPublicAnswers(inspection.id);
-  await upsertAnswerRecords(inspection.id, buildCustomerVehicleAnswerRecords(data));
   await updateInspectionDerivedState(inspection.id, { lastCompletedStep: 1 });
 
   return getPublicSelfInspectionWizard(token);
