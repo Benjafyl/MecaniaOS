@@ -110,6 +110,29 @@ const DEMO_SELF_INSPECTION_PROBLEM_DRAFT = {
   description: DEMO_SELF_INSPECTION_DESCRIPTION,
 };
 
+const DEMO_SELF_INSPECTION_PHOTOS = [
+  {
+    id: "demo-primary-damage-photo",
+    photoType: SelfInspectionPhotoType.PRIMARY_DAMAGE,
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS[SelfInspectionPhotoType.PRIMARY_DAMAGE],
+    fileUrl: "/demo/foto.principal.del.problema.jpg",
+    fileName: "foto.principal.del.problema.jpg",
+    comment: null,
+    isRequired: true,
+    sortOrder: 1,
+  },
+  {
+    id: "demo-dashboard-photo",
+    photoType: SelfInspectionPhotoType.DASHBOARD_ON,
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS[SelfInspectionPhotoType.DASHBOARD_ON],
+    fileUrl: "/demo/tablero.hilux.jpg",
+    fileName: "tablero.hilux.jpg",
+    comment: null,
+    isRequired: false,
+    sortOrder: 3,
+  },
+] as const;
+
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
   [SelfInspectionRiskLevel.MEDIUM]: 1,
@@ -953,6 +976,28 @@ function buildPublicSelfInspectionWizardPayload(inspection: PublicInspectionEnti
   const answersMap = mapAnswersToRecord(inspection.answers);
   const customerNotes = parseCustomerNotes(inspection.notes);
   const contactSnapshot = buildContactSnapshot(inspection.customer, answersMap);
+  const photos = [
+    ...inspection.photos.map((photo) => ({
+      id: photo.id,
+      photoType: photo.photoType,
+      photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS[photo.photoType],
+      fileUrl: photo.fileUrl,
+      fileName: photo.fileName,
+      comment: photo.comment,
+      isRequired: photo.isRequired,
+      sortOrder: photo.sortOrder,
+      createdAt: photo.createdAt,
+    })),
+    ...(isDemoModeEnabled()
+      ? DEMO_SELF_INSPECTION_PHOTOS.filter(
+          (demoPhoto) =>
+            !inspection.photos.some((photo) => photo.photoType === demoPhoto.photoType),
+        ).map((demoPhoto) => ({
+          ...demoPhoto,
+          createdAt: inspection.createdAt,
+        }))
+      : []),
+  ];
   const criticalFindings = createCriticalFindings({
     snapshot: inspection.vehicleSnapshot
       ? {
@@ -989,21 +1034,11 @@ function buildPublicSelfInspectionWizardPayload(inspection: PublicInspectionEnti
       problem: buildProblemStepDraft(inspection, answersMap),
       evidence: customerNotes,
     },
-    photos: inspection.photos.map((photo) => ({
-      id: photo.id,
-      photoType: photo.photoType,
-      photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS[photo.photoType],
-      fileUrl: photo.fileUrl,
-      fileName: photo.fileName,
-      comment: photo.comment,
-      isRequired: photo.isRequired,
-      sortOrder: photo.sortOrder,
-      createdAt: photo.createdAt,
-    })),
+    photos,
     photoSlots: SELF_INSPECTION_PHOTO_SLOTS,
     criticalFindings,
     missingRequiredPhotoTypes: SELF_INSPECTION_REQUIRED_PHOTO_TYPES.filter(
-      (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
+      (photoType) => !photos.some((photo) => photo.photoType === photoType),
     ),
   };
 }
@@ -1734,7 +1769,12 @@ export async function submitPublicSelfInspection(token: string, input: unknown) 
     isAnswerMissing(answersMap[questionKey]),
   );
   const missingPhotoTypes = SELF_INSPECTION_REQUIRED_PHOTO_TYPES.filter(
-    (photoType) => !inspection.photos.some((photo) => photo.photoType === photoType),
+    (photoType) =>
+      !inspection.photos.some((photo) => photo.photoType === photoType) &&
+      !(
+        isDemoModeEnabled() &&
+        DEMO_SELF_INSPECTION_PHOTOS.some((photo) => photo.photoType === photoType)
+      ),
   );
 
   if (missingAnswers.length > 0) {
