@@ -213,7 +213,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         body: JSON.stringify(payload),
       });
 
-      setData(nextData);
+      setData(applyDemoDefaults(nextData));
 
       if (nextStep) {
         setCurrentStep(nextStep);
@@ -244,7 +244,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         },
       );
 
-      setData(nextData);
+      setData(applyDemoDefaults(nextData));
     } catch (uploadError) {
       setErrorMessages(getErrorMessages(uploadError));
     } finally {
@@ -264,7 +264,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         },
       );
 
-      setData(nextData);
+      setData(applyDemoDefaults(nextData));
     } catch (deleteError) {
       setErrorMessages(getErrorMessages(deleteError));
     } finally {
@@ -290,7 +290,7 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         },
       );
 
-      setData(nextData);
+      setData(applyDemoDefaults(nextData));
       setCurrentStep(4);
     } catch (submitError) {
       setErrorMessages(getErrorMessages(submitError));
