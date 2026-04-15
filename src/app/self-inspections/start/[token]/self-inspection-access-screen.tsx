@@ -39,11 +39,11 @@ export function SelfInspectionAccessScreen({
   sessionRole,
 }: AccessScreenProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("register");
+  const [fullName, setFullName] = useState("Benjamin Yañez");
+  const [email, setEmail] = useState("Benjafyl@gmail.com");
+  const [password, setPassword] = useState("Benja1122");
+  const [confirmPassword, setConfirmPassword] = useState("Benja1122");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
