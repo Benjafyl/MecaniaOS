@@ -71,6 +71,17 @@ const demoCustomerVehicleDefaults = {
   mileage: "68420",
 };
 
+const demoProblemDefaults = {
+  problemType: "MOTOR",
+  vehicleStarts: true,
+  canDrive: true,
+  warningLights: true,
+  problemSince: "DAYS",
+  issueFrequency: "CONSTANT",
+  description:
+    "Hace unos dias la camioneta empezo a sentirse mas pesada al acelerar, sobre todo en subidas o al salir de los semaforos. Enciende normal y se puede manejar, pero pierde fuerza y prende una luz en el tablero. No se mucho de mecanica, pero siento que el motor no responde como antes.",
+};
+
 function getInitialCurrentStep(data: PublicSelfInspectionWizardData) {
   if (
     data.inspection.status === "SUBMITTED" ||
@@ -141,6 +152,17 @@ export function SelfInspectionWizard({ token, initialData }: WizardProps) {
         make: initialData.form.customerVehicle.make || demoCustomerVehicleDefaults.make,
         model: initialData.form.customerVehicle.model || demoCustomerVehicleDefaults.model,
         mileage: initialData.form.customerVehicle.mileage || demoCustomerVehicleDefaults.mileage,
+      },
+      problem: {
+        ...initialData.form.problem,
+        problemType: initialData.form.problem.problemType || demoProblemDefaults.problemType,
+        vehicleStarts: initialData.form.problem.vehicleStarts ?? demoProblemDefaults.vehicleStarts,
+        canDrive: initialData.form.problem.canDrive ?? demoProblemDefaults.canDrive,
+        warningLights: initialData.form.problem.warningLights ?? demoProblemDefaults.warningLights,
+        problemSince: initialData.form.problem.problemSince || demoProblemDefaults.problemSince,
+        issueFrequency:
+          initialData.form.problem.issueFrequency || demoProblemDefaults.issueFrequency,
+        description: initialData.form.problem.description || demoProblemDefaults.description,
       },
     },
   }));
