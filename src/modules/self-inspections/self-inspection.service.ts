@@ -82,23 +82,23 @@ const PENDING_SELF_INSPECTION_CLIENT_PREFIX = "SI_PENDING";
 const PENDING_SELF_INSPECTION_CLIENT_NAME = "Cliente por identificar";
 const PENDING_SELF_INSPECTION_EMAIL_DOMAIN = "self-inspection.pending.mecaniaos.local";
 const DEMO_SELF_INSPECTION_CONTACT = {
-  fullName: "Benjamin Yañez",
-  phone: "+56 9 5555 4949",
-  email: "benjamin.yanez@cliente.mecaniaos.cl",
+  fullName: "Benjamin Ya\u00f1ez",
+  phone: "+569 94402632",
+  email: "benjafyl@gmail.com",
 };
 const DEMO_SELF_INSPECTION_VEHICLE = {
-  plate: "RY SB 49",
-  vin: "8AJBA3CD7GL184926",
+  plate: "RYSB49",
+  vin: "8AJBA3CD6N1234567",
   make: "Toyota",
   model: "Hilux",
-  year: 2021,
-  color: "Blanca",
+  year: 2022,
+  color: null,
   mileage: 68420,
   fuelType: VehicleFuelType.GASOLINE,
   transmission: VehicleTransmissionType.MANUAL,
 };
 const DEMO_SELF_INSPECTION_DESCRIPTION =
-  "Ruido intermitente en tren delantero al frenar y al pasar lomos de toro.";
+  "Hace unos dias la camioneta empezo a sentirse mas pesada al acelerar, sobre todo en subidas o al salir de los semaforos. Enciende normal y se puede manejar, pero pierde fuerza y prende una luz en el tablero. No se mucho de mecanica, pero siento que el motor no responde como antes.";
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
@@ -1264,7 +1264,7 @@ export async function createSelfInspectionInvite(input: unknown) {
           ? {
               create: {
                 ...DEMO_SELF_INSPECTION_VEHICLE,
-                starts: false,
+                starts: true,
               },
             }
           : undefined,
@@ -1297,8 +1297,8 @@ export async function createSelfInspectionInvite(input: unknown) {
                   questionKey: "reason_problem_type",
                   questionLabel: "Tipo de problema",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "STEERING_SUSPENSION",
-                  severity: SelfInspectionRiskLevel.HIGH,
+                  answerValue: "MOTOR",
+                  severity: SelfInspectionRiskLevel.MEDIUM,
                 },
                 {
                   section: "problem",
@@ -1327,14 +1327,14 @@ export async function createSelfInspectionInvite(input: unknown) {
                   questionKey: "reason_problem_since",
                   questionLabel: "Desde cuando comenzo el problema",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "WEEKS",
+                  answerValue: "DAYS",
                 },
                 {
                   section: "problem",
                   questionKey: "reason_issue_frequency",
                   questionLabel: "El problema es constante o intermitente",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "INTERMITTENT",
+                  answerValue: "CONSTANT",
                 },
                 {
                   section: "problem",

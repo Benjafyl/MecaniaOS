@@ -40,7 +40,7 @@ export function SelfInspectionAccessScreen({
 }: AccessScreenProps) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("register");
-  const [fullName, setFullName] = useState("Benjamin Yañez");
+  const [fullName, setFullName] = useState("Benjamin Ya\u00f1ez");
   const [email, setEmail] = useState("Benjafyl@gmail.com");
   const [password, setPassword] = useState("Benja1122");
   const [confirmPassword, setConfirmPassword] = useState("Benja1122");
