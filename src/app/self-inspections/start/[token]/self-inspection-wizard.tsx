@@ -61,6 +61,16 @@ const validationPathLabels: Record<string, string> = {
   finalComment: "comentario final",
 };
 
+const demoCustomerVehicleDefaults = {
+  phone: "+569 94402632",
+  plate: "RYSB49",
+  vin: "8AJBA3CD6N1234567",
+  year: "2022",
+  make: "Toyota",
+  model: "Hilux",
+  mileage: "68420",
+};
+
 function getInitialCurrentStep(data: PublicSelfInspectionWizardData) {
   if (
     data.inspection.status === "SUBMITTED" ||
@@ -118,7 +128,22 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function SelfInspectionWizard({ token, initialData }: WizardProps) {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState(() => ({
+    ...initialData,
+    form: {
+      ...initialData.form,
+      customerVehicle: {
+        ...initialData.form.customerVehicle,
+        phone: initialData.form.customerVehicle.phone || demoCustomerVehicleDefaults.phone,
+        plate: initialData.form.customerVehicle.plate || demoCustomerVehicleDefaults.plate,
+        vin: initialData.form.customerVehicle.vin || demoCustomerVehicleDefaults.vin,
+        year: initialData.form.customerVehicle.year || demoCustomerVehicleDefaults.year,
+        make: initialData.form.customerVehicle.make || demoCustomerVehicleDefaults.make,
+        model: initialData.form.customerVehicle.model || demoCustomerVehicleDefaults.model,
+        mileage: initialData.form.customerVehicle.mileage || demoCustomerVehicleDefaults.mileage,
+      },
+    },
+  }));
   const [currentStep, setCurrentStep] = useState(getInitialCurrentStep(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingPhotoType, setUploadingPhotoType] = useState<string | null>(null);
