@@ -91,11 +91,11 @@ const demoProblemDefaults: Pick<
   problemType: "MOTOR",
   vehicleStarts: true,
   canDrive: true,
-  warningLights: true,
+  warningLights: false,
   problemSince: "DAYS",
   issueFrequency: "CONSTANT",
   description:
-    "Hace unos dias la camioneta empezo a sentirse mas pesada al acelerar, sobre todo en subidas o al salir de los semaforos. Enciende normal y se puede manejar, pero pierde fuerza y prende una luz en el tablero. No se mucho de mecanica, pero siento que el motor no responde como antes.",
+    "En las subidas el auto se queda sin potencia y cuando acelero en carretera tampoco se siente con la misma fuerza de siempre. Enciende bien y puedo manejarlo, pero me preocupa porque antes respondia mucho mejor.",
 };
 
 function applyDemoDefaults(data: PublicSelfInspectionWizardData): PublicSelfInspectionWizardData {

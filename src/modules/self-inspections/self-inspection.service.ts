@@ -98,7 +98,17 @@ const DEMO_SELF_INSPECTION_VEHICLE = {
   transmission: VehicleTransmissionType.MANUAL,
 };
 const DEMO_SELF_INSPECTION_DESCRIPTION =
-  "Hace unos dias la camioneta empezo a sentirse mas pesada al acelerar, sobre todo en subidas o al salir de los semaforos. Enciende normal y se puede manejar, pero pierde fuerza y prende una luz en el tablero. No se mucho de mecanica, pero siento que el motor no responde como antes.";
+  "En las subidas el auto se queda sin potencia y cuando acelero en carretera tampoco se siente con la misma fuerza de siempre. Enciende bien y puedo manejarlo, pero me preocupa porque antes respondia mucho mejor.";
+
+const DEMO_SELF_INSPECTION_PROBLEM_DRAFT = {
+  problemType: "MOTOR",
+  vehicleStarts: true,
+  canDrive: true,
+  warningLights: false,
+  problemSince: "DAYS",
+  issueFrequency: "CONSTANT",
+  description: DEMO_SELF_INSPECTION_DESCRIPTION,
+};
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
   [SelfInspectionRiskLevel.LOW]: 0,
@@ -308,7 +318,7 @@ function buildCustomerVehicleStepDraft(inspection: PublicInspectionEntity, answe
 }
 
 function buildProblemStepDraft(inspection: PublicInspectionEntity, answersMap: AnswerMap) {
-  return {
+  const draft = {
     problemType: String(
       answersMap.reason_problem_type ?? mapLegacyReasonToProblemType(inspection.inspectionReason),
     ),
@@ -327,6 +337,20 @@ function buildProblemStepDraft(inspection: PublicInspectionEntity, answersMap: A
     problemSince: String(answersMap.reason_problem_since ?? ""),
     issueFrequency: String(answersMap.reason_issue_frequency ?? ""),
     description: String(answersMap.reason_problem_description ?? inspection.mainComplaint ?? ""),
+  };
+
+  if (!isDemoModeEnabled()) {
+    return draft;
+  }
+
+  return {
+    problemType: draft.problemType || DEMO_SELF_INSPECTION_PROBLEM_DRAFT.problemType,
+    vehicleStarts: draft.vehicleStarts ?? DEMO_SELF_INSPECTION_PROBLEM_DRAFT.vehicleStarts,
+    canDrive: draft.canDrive ?? DEMO_SELF_INSPECTION_PROBLEM_DRAFT.canDrive,
+    warningLights: draft.warningLights ?? DEMO_SELF_INSPECTION_PROBLEM_DRAFT.warningLights,
+    problemSince: draft.problemSince || DEMO_SELF_INSPECTION_PROBLEM_DRAFT.problemSince,
+    issueFrequency: draft.issueFrequency || DEMO_SELF_INSPECTION_PROBLEM_DRAFT.issueFrequency,
+    description: draft.description || DEMO_SELF_INSPECTION_PROBLEM_DRAFT.description,
   };
 }
 
@@ -1297,7 +1321,7 @@ export async function createSelfInspectionInvite(input: unknown) {
                   questionKey: "reason_problem_type",
                   questionLabel: "Tipo de problema",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "MOTOR",
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.problemType,
                   severity: SelfInspectionRiskLevel.MEDIUM,
                 },
                 {
@@ -1305,36 +1329,35 @@ export async function createSelfInspectionInvite(input: unknown) {
                   questionKey: "vehicle_starts",
                   questionLabel: "El vehiculo enciende",
                   answerType: SelfInspectionAnswerType.BOOLEAN,
-                  answerValue: true,
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.vehicleStarts,
                 },
                 {
                   section: "problem",
                   questionKey: "reason_can_drive",
                   questionLabel: "El vehiculo puede circular actualmente",
                   answerType: SelfInspectionAnswerType.BOOLEAN,
-                  answerValue: true,
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.canDrive,
                 },
                 {
                   section: "problem",
                   questionKey: "reason_warning_lights",
                   questionLabel: "Hay luces de advertencia encendidas",
                   answerType: SelfInspectionAnswerType.BOOLEAN,
-                  answerValue: true,
-                  severity: SelfInspectionRiskLevel.HIGH,
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.warningLights,
                 },
                 {
                   section: "problem",
                   questionKey: "reason_problem_since",
                   questionLabel: "Desde cuando comenzo el problema",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "DAYS",
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.problemSince,
                 },
                 {
                   section: "problem",
                   questionKey: "reason_issue_frequency",
                   questionLabel: "El problema es constante o intermitente",
                   answerType: SelfInspectionAnswerType.SINGLE_CHOICE,
-                  answerValue: "CONSTANT",
+                  answerValue: DEMO_SELF_INSPECTION_PROBLEM_DRAFT.issueFrequency,
                 },
                 {
                   section: "problem",
