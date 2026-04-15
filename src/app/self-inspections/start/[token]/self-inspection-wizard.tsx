@@ -121,6 +121,17 @@ const demoPhotos: PublicSelfInspectionWizardData["photos"] = [
     sortOrder: 3,
     createdAt: new Date(),
   },
+  {
+    id: "demo-frontal-full-photo",
+    photoType: "FRONTAL_FULL",
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS.FRONTAL_FULL,
+    fileUrl: "/demo/vehiculo.completo.jpg",
+    fileName: "vehiculo.completo.jpg",
+    comment: null,
+    isRequired: false,
+    sortOrder: 4,
+    createdAt: new Date(),
+  },
 ];
 
 function applyDemoDefaults(data: PublicSelfInspectionWizardData): PublicSelfInspectionWizardData {

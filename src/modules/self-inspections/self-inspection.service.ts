@@ -131,6 +131,16 @@ const DEMO_SELF_INSPECTION_PHOTOS = [
     isRequired: false,
     sortOrder: 3,
   },
+  {
+    id: "demo-frontal-full-photo",
+    photoType: SelfInspectionPhotoType.FRONTAL_FULL,
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS[SelfInspectionPhotoType.FRONTAL_FULL],
+    fileUrl: "/demo/vehiculo.completo.jpg",
+    fileName: "vehiculo.completo.jpg",
+    comment: null,
+    isRequired: false,
+    sortOrder: 4,
+  },
 ] as const;
 
 const RISK_PRIORITY: Record<SelfInspectionRiskLevel, number> = {
