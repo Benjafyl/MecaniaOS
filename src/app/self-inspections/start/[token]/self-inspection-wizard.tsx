@@ -98,7 +98,39 @@ const demoProblemDefaults: Pick<
     "En las subidas el auto se queda sin potencia y cuando acelero en carretera tampoco se siente con la misma fuerza de siempre. Enciende bien y puedo manejarlo, pero me preocupa porque antes respondia mucho mejor.",
 };
 
+const demoPhotos: PublicSelfInspectionWizardData["photos"] = [
+  {
+    id: "demo-primary-damage-photo",
+    photoType: "PRIMARY_DAMAGE",
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS.PRIMARY_DAMAGE,
+    fileUrl: "/demo/foto.principal.del.problema.jpg",
+    fileName: "foto.principal.del.problema.jpg",
+    comment: null,
+    isRequired: true,
+    sortOrder: 1,
+    createdAt: new Date(),
+  },
+  {
+    id: "demo-dashboard-photo",
+    photoType: "DASHBOARD_ON",
+    photoTypeLabel: SELF_INSPECTION_PHOTO_TYPE_LABELS.DASHBOARD_ON,
+    fileUrl: "/demo/tablero.hilux.jpg",
+    fileName: "tablero.hilux.jpg",
+    comment: null,
+    isRequired: false,
+    sortOrder: 3,
+    createdAt: new Date(),
+  },
+];
+
 function applyDemoDefaults(data: PublicSelfInspectionWizardData): PublicSelfInspectionWizardData {
+  const photos = [
+    ...data.photos,
+    ...demoPhotos.filter(
+      (demoPhoto) => !data.photos.some((photo) => photo.photoType === demoPhoto.photoType),
+    ),
+  ];
+
   return {
     ...data,
     form: {
@@ -124,6 +156,10 @@ function applyDemoDefaults(data: PublicSelfInspectionWizardData): PublicSelfInsp
         description: data.form.problem.description || demoProblemDefaults.description,
       },
     },
+    photos,
+    missingRequiredPhotoTypes: data.missingRequiredPhotoTypes.filter(
+      (photoType) => !photos.some((photo) => photo.photoType === photoType),
+    ),
   };
 }
 
