@@ -31,6 +31,10 @@ type ApiValidationDetail = {
   message: string;
 };
 
+type WizardForm = PublicSelfInspectionWizardData["form"];
+type CustomerVehicleDraft = WizardForm["customerVehicle"];
+type ProblemDraft = WizardForm["problem"];
+
 class RequestError extends Error {
   constructor(
     message: string,
@@ -61,7 +65,10 @@ const validationPathLabels: Record<string, string> = {
   finalComment: "comentario final",
 };
 
-const demoCustomerVehicleDefaults = {
+const demoCustomerVehicleDefaults: Pick<
+  CustomerVehicleDraft,
+  "phone" | "plate" | "vin" | "year" | "make" | "model" | "mileage"
+> = {
   phone: "+569 94402632",
   plate: "RYSB49",
   vin: "8AJBA3CD6N1234567",
@@ -71,7 +78,16 @@ const demoCustomerVehicleDefaults = {
   mileage: "68420",
 };
 
-const demoProblemDefaults = {
+const demoProblemDefaults: Pick<
+  ProblemDraft,
+  | "problemType"
+  | "vehicleStarts"
+  | "canDrive"
+  | "warningLights"
+  | "problemSince"
+  | "issueFrequency"
+  | "description"
+> = {
   problemType: "MOTOR",
   vehicleStarts: true,
   canDrive: true,
@@ -81,6 +97,35 @@ const demoProblemDefaults = {
   description:
     "Hace unos dias la camioneta empezo a sentirse mas pesada al acelerar, sobre todo en subidas o al salir de los semaforos. Enciende normal y se puede manejar, pero pierde fuerza y prende una luz en el tablero. No se mucho de mecanica, pero siento que el motor no responde como antes.",
 };
+
+function applyDemoDefaults(data: PublicSelfInspectionWizardData): PublicSelfInspectionWizardData {
+  return {
+    ...data,
+    form: {
+      ...data.form,
+      customerVehicle: {
+        ...data.form.customerVehicle,
+        phone: data.form.customerVehicle.phone || demoCustomerVehicleDefaults.phone,
+        plate: data.form.customerVehicle.plate || demoCustomerVehicleDefaults.plate,
+        vin: data.form.customerVehicle.vin || demoCustomerVehicleDefaults.vin,
+        year: data.form.customerVehicle.year || demoCustomerVehicleDefaults.year,
+        make: data.form.customerVehicle.make || demoCustomerVehicleDefaults.make,
+        model: data.form.customerVehicle.model || demoCustomerVehicleDefaults.model,
+        mileage: data.form.customerVehicle.mileage || demoCustomerVehicleDefaults.mileage,
+      },
+      problem: {
+        ...data.form.problem,
+        problemType: data.form.problem.problemType || demoProblemDefaults.problemType,
+        vehicleStarts: data.form.problem.vehicleStarts ?? demoProblemDefaults.vehicleStarts,
+        canDrive: data.form.problem.canDrive ?? demoProblemDefaults.canDrive,
+        warningLights: data.form.problem.warningLights ?? demoProblemDefaults.warningLights,
+        problemSince: data.form.problem.problemSince || demoProblemDefaults.problemSince,
+        issueFrequency: data.form.problem.issueFrequency || demoProblemDefaults.issueFrequency,
+        description: data.form.problem.description || demoProblemDefaults.description,
+      },
+    },
+  };
+}
 
 function getInitialCurrentStep(data: PublicSelfInspectionWizardData) {
   if (
@@ -139,33 +184,9 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function SelfInspectionWizard({ token, initialData }: WizardProps) {
-  const [data, setData] = useState(() => ({
-    ...initialData,
-    form: {
-      ...initialData.form,
-      customerVehicle: {
-        ...initialData.form.customerVehicle,
-        phone: initialData.form.customerVehicle.phone || demoCustomerVehicleDefaults.phone,
-        plate: initialData.form.customerVehicle.plate || demoCustomerVehicleDefaults.plate,
-        vin: initialData.form.customerVehicle.vin || demoCustomerVehicleDefaults.vin,
-        year: initialData.form.customerVehicle.year || demoCustomerVehicleDefaults.year,
-        make: initialData.form.customerVehicle.make || demoCustomerVehicleDefaults.make,
-        model: initialData.form.customerVehicle.model || demoCustomerVehicleDefaults.model,
-        mileage: initialData.form.customerVehicle.mileage || demoCustomerVehicleDefaults.mileage,
-      },
-      problem: {
-        ...initialData.form.problem,
-        problemType: initialData.form.problem.problemType || demoProblemDefaults.problemType,
-        vehicleStarts: initialData.form.problem.vehicleStarts ?? demoProblemDefaults.vehicleStarts,
-        canDrive: initialData.form.problem.canDrive ?? demoProblemDefaults.canDrive,
-        warningLights: initialData.form.problem.warningLights ?? demoProblemDefaults.warningLights,
-        problemSince: initialData.form.problem.problemSince || demoProblemDefaults.problemSince,
-        issueFrequency:
-          initialData.form.problem.issueFrequency || demoProblemDefaults.issueFrequency,
-        description: initialData.form.problem.description || demoProblemDefaults.description,
-      },
-    },
-  }));
+  const [data, setData] = useState<PublicSelfInspectionWizardData>(() =>
+    applyDemoDefaults(initialData),
+  );
   const [currentStep, setCurrentStep] = useState(getInitialCurrentStep(initialData));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingPhotoType, setUploadingPhotoType] = useState<string | null>(null);
