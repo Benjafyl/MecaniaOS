@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mecaniaos-app
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - mecaniaos_uploads:/app/public/uploads
+    restart: unless-stopped
+
+volumes:
+  mecaniaos_uploads:

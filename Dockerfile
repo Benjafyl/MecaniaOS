@@ -15,9 +15,11 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-ENV DATABASE_URL="postgresql://postgres:postgres@db:5432/mecaniaos?schema=public"
-ENV SESSION_SECRET="replace-this-with-a-long-random-secret-123"
-ENV APP_URL="http://localhost:3000"
+ENV DATABASE_URL="postgresql://user:password@127.0.0.1:5432/mecaniaos?schema=public"
+ENV DIRECT_URL="postgresql://user:password@127.0.0.1:5432/mecaniaos?schema=public"
+ENV SESSION_SECRET="replace-this-with-a-long-random-secret-at-least-32-characters"
+ENV APP_URL="https://example.com"
+ENV NODE_ENV="production"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -30,12 +32,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["node", "server.js"]
