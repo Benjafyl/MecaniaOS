@@ -42,12 +42,14 @@ export async function signIn(input: unknown) {
   await authRepository.createSession(user.id, tokenHash, expiresAt);
 
   const cookieStore = await cookies();
+  const useSecureCookie =
+    env.NODE_ENV === "production" && new URL(env.APP_URL).protocol === "https:";
   cookieStore.set(SESSION_COOKIE_NAME, rawToken, {
     expires: expiresAt,
     httpOnly: true,
     path: "/",
     sameSite: "lax",
-    secure: env.NODE_ENV === "production",
+    secure: useSecureCookie,
   });
 
   return {
