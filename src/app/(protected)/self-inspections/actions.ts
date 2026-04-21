@@ -19,23 +19,25 @@ export async function createSelfInspectionInviteAction(
   _previousState: InviteActionState,
   formData: FormData,
 ): Promise<InviteActionState> {
+  let invite: Awaited<ReturnType<typeof createSelfInspectionInvite>>;
+
   try {
     await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
-    const invite = await createSelfInspectionInvite({
+    invite = await createSelfInspectionInvite({
       customerId: String(formData.get("customerId") ?? ""),
       vehicleId: String(formData.get("vehicleId") ?? ""),
       sourceChannel: String(formData.get("sourceChannel") ?? "SECURE_LINK"),
       expiresInDays: String(formData.get("expiresInDays") ?? "7"),
     });
-
-    revalidatePath("/self-inspections");
-    redirect(`/self-inspections/${invite.inspectionId}?token=${invite.token}`);
   } catch (error) {
     return {
       error: getErrorMessage(error),
     };
   }
+
+  revalidatePath("/self-inspections");
+  redirect(`/self-inspections/${invite.inspectionId}?token=${invite.token}`);
 }
 
 export async function reviewSelfInspectionAction(
