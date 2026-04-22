@@ -302,8 +302,11 @@ export async function createWorkOrderFromBudget(budgetId: string, actorId: strin
   }
 
   const orderNumber = await createWorkOrderNumber();
-  const reason = budget.items
-    .map((item) => item.description)
+  const summarizedItems = budget.items
+    .map(
+      (item) =>
+        `${item.description} (${item.quantity} x ${item.unitPrice.toLocaleString("es-CL")})`,
+    )
     .slice(0, 3)
     .join(", ");
 
@@ -313,11 +316,16 @@ export async function createWorkOrderFromBudget(budgetId: string, actorId: strin
         orderNumber,
         clientId: budget.clientId,
         vehicleId: budget.vehicleId,
-        reason: `Presupuesto aprobado ${budget.budgetNumber}: ${reason}`,
+        reason: `Presupuesto aprobado ${budget.budgetNumber}: ${summarizedItems}`,
         initialDiagnosis:
           budget.summary ?? `Orden creada desde presupuesto aprobado ${budget.budgetNumber}.`,
         status: WorkOrderStatus.RECEIVED,
-        notes: `OT generada desde presupuesto ${budget.budgetNumber}. Total aprobado: ${budget.totalAmount}.`,
+        notes:
+          `OT generada desde presupuesto ${budget.budgetNumber}.\n` +
+          `Total aprobado: ${budget.totalAmount.toLocaleString("es-CL")}.\n` +
+          `Repuestos: ${budget.subtotalParts.toLocaleString("es-CL")}.\n` +
+          `Mano de obra: ${budget.subtotalLabor.toLocaleString("es-CL")}.\n` +
+          `Suministros: ${budget.subtotalSupplies.toLocaleString("es-CL")}.`,
         createdById: actorId,
         updatedById: actorId,
       },
