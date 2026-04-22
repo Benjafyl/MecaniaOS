@@ -19,6 +19,18 @@ export function formatDate(value?: Date | string | null) {
   }).format(date);
 }
 
+export function formatCurrency(value?: number | null) {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export function formatDateTime(value?: Date | string | null) {
   if (!value) {
     return "-";
