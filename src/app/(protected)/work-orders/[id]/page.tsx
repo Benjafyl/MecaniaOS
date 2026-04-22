@@ -6,12 +6,17 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { listInventoryOptions } from "@/modules/inventory/inventory.service";
 import {
   getAssignableMechanics,
   getWorkOrderById,
 } from "@/modules/work-orders/work-order.service";
 import { AssignmentForm } from "@/app/(protected)/work-orders/assignment-form";
 import { EvidenceUploadForm } from "@/app/(protected)/work-orders/evidence-upload-form";
+import {
+  ExistingPartUsageForm,
+  PartsUsageForm,
+} from "@/app/(protected)/work-orders/parts-usage-form";
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
 
@@ -30,7 +35,10 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
     throw error;
   });
-  const mechanics = await getAssignableMechanics();
+  const [mechanics, repuestos] = await Promise.all([
+    getAssignableMechanics(),
+    listInventoryOptions(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -121,6 +129,56 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
             <div className="mt-5">
               <StatusForm currentStatus={workOrder.status} orderId={workOrder.id} />
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <h2 className="font-heading text-2xl font-semibold">Repuestos utilizados</h2>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">
+              Registra la cantidad final usada por repuesto. Si cambias una cantidad, solo se mueve
+              la diferencia de stock.
+            </p>
+
+            <div className="mt-5">
+              <PartsUsageForm orderId={workOrder.id} repuestos={repuestos} />
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {workOrder.parts.map((part) => (
+                <div
+                  className="rounded-xl border border-[color:var(--border)] bg-white/70 p-4"
+                  key={part.id}
+                >
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="font-semibold text-[color:var(--foreground)]">
+                        {part.repuesto.name}
+                      </p>
+                      <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
+                        {part.repuesto.code} / usado {part.quantity} / stock actual{" "}
+                        {part.repuesto.currentStock}
+                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">
+                        Registrado por {part.createdBy.name} / {formatDateTime(part.createdAt)}
+                      </p>
+                    </div>
+
+                    <ExistingPartUsageForm
+                      orderId={workOrder.id}
+                      part={{
+                        repuestoId: part.repuestoId,
+                        quantity: part.quantity,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {workOrder.parts.length === 0 ? (
+                <p className="text-sm text-[color:var(--muted)]">
+                  Aun no hay repuestos descontados en esta orden.
+                </p>
+              ) : null}
             </div>
           </Card>
         </div>

@@ -10,14 +10,17 @@ FROM base AS deps
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 
 ENV DATABASE_URL="postgresql://postgres:postgres@db:5432/mecaniaos?schema=public"
+ENV DIRECT_URL="postgresql://postgres:postgres@db:5432/mecaniaos?schema=public"
 ENV SESSION_SECRET="replace-this-with-a-long-random-secret-123"
 ENV APP_URL="http://localhost:3000"
+ENV SUPABASE_URL="http://localhost:54321"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -29,6 +32,11 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV DATABASE_URL="postgresql://postgres:postgres@db:5432/mecaniaos?schema=public"
+ENV DIRECT_URL="postgresql://postgres:postgres@db:5432/mecaniaos?schema=public"
+ENV SESSION_SECRET="replace-this-with-a-long-random-secret-123"
+ENV APP_URL="http://localhost:3000"
+ENV SUPABASE_URL="http://localhost:54321"
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public

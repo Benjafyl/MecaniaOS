@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
 import type { ActionState } from "@/lib/form-state";
@@ -13,6 +14,7 @@ import {
   updateWorkOrderAssignment,
   updateWorkOrderStatus,
 } from "@/modules/work-orders/work-order.service";
+import { setWorkOrderPartUsage } from "@/modules/inventory/inventory.service";
 
 export async function createWorkOrderAction(
   _previousState: ActionState,
@@ -143,6 +145,39 @@ export async function addWorkOrderEvidenceAction(
     };
   }
 
+  revalidatePath(`/work-orders/${orderId}`);
+  redirect(`/work-orders/${orderId}`);
+}
+
+export async function setWorkOrderPartUsageAction(
+  _previousState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const orderId = String(formData.get("orderId") ?? "");
+
+  try {
+    const session = await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
+
+    await setWorkOrderPartUsage(
+      orderId,
+      {
+        repuestoId: String(formData.get("repuestoId") ?? ""),
+        quantity: String(formData.get("quantity") ?? ""),
+      },
+      session.user.id,
+    );
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return {
+      error: getErrorMessage(error),
+    };
+  }
+
+  revalidatePath("/inventory");
+  revalidatePath("/work-orders");
   revalidatePath(`/work-orders/${orderId}`);
   redirect(`/work-orders/${orderId}`);
 }
