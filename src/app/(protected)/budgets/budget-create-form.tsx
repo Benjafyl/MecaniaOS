@@ -42,6 +42,7 @@ type BudgetCreateFormProps = {
 
 export function BudgetCreateForm({ clients, vehicles, references }: BudgetCreateFormProps) {
   const [state, formAction] = useActionState(createBudgetDraftAction, initialActionState);
+  const manualSlots = [1, 2] as const;
 
   const groupedReferences = {
     [BudgetItemType.PART]: references.filter((reference) => reference.itemType === BudgetItemType.PART),
@@ -106,7 +107,7 @@ export function BudgetCreateForm({ clients, vehicles, references }: BudgetCreate
           <div className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-                Valores reales de referencia
+                Seleccionar del catalogo
               </p>
               <h2 className="mt-2 font-heading text-2xl font-semibold">
                 {BUDGET_ITEM_TYPE_LABELS[type]}
@@ -114,6 +115,13 @@ export function BudgetCreateForm({ clients, vehicles, references }: BudgetCreate
             </div>
 
             <div className="space-y-4">
+              {groupedReferences[type].length === 0 ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  No hay items cargados en el catalogo para esta categoria. Puedes continuar
+                  agregando un item manual para que el flujo no se bloquee.
+                </div>
+              ) : null}
+
               {groupedReferences[type].map((reference) => (
                 <div
                   className="grid gap-4 rounded-2xl border border-[color:var(--border)] bg-white p-4 lg:grid-cols-[1.5fr_160px]"
@@ -173,6 +181,94 @@ export function BudgetCreateForm({ clients, vehicles, references }: BudgetCreate
                   </div>
                 </div>
               ))}
+
+              <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface)] p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+                    Agregar manualmente
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
+                    {BUDGET_ITEM_TYPE_LABELS[type]} fuera del catalogo
+                  </h3>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">
+                    Usa esta opcion si aun no hay datos cargados en el catalogo o necesitas
+                    presupuestar un item puntual.
+                  </p>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  {manualSlots.map((slot) => (
+                    <div
+                      className="grid gap-3 rounded-2xl border border-[color:var(--border)] bg-white p-4 lg:grid-cols-[2fr_140px_140px]"
+                      key={`${type}-${slot}`}
+                    >
+                      <div className="space-y-2 lg:col-span-3">
+                        <label
+                          className="text-sm font-medium text-[color:var(--muted-strong)]"
+                          htmlFor={`manualDescription:${type}:${slot}`}
+                        >
+                          Descripcion manual
+                        </label>
+                        <Input
+                          id={`manualDescription:${type}:${slot}`}
+                          name={`manualDescription:${type}:${slot}`}
+                          placeholder={
+                            type === BudgetItemType.PART
+                              ? "Ej. Pastillas Brembo delanteras"
+                              : "Ej. Mano de obra cambio discos y rectificado"
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          className="text-sm font-medium text-[color:var(--muted-strong)]"
+                          htmlFor={`manualQuantity:${type}:${slot}`}
+                        >
+                          Cantidad
+                        </label>
+                        <Input
+                          defaultValue="0"
+                          id={`manualQuantity:${type}:${slot}`}
+                          min="0"
+                          name={`manualQuantity:${type}:${slot}`}
+                          type="number"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          className="text-sm font-medium text-[color:var(--muted-strong)]"
+                          htmlFor={`manualPrice:${type}:${slot}`}
+                        >
+                          Valor unitario
+                        </label>
+                        <Input
+                          defaultValue="0"
+                          id={`manualPrice:${type}:${slot}`}
+                          min="0"
+                          name={`manualPrice:${type}:${slot}`}
+                          type="number"
+                        />
+                      </div>
+
+                      <div className="space-y-2 lg:col-span-3">
+                        <label
+                          className="text-sm font-medium text-[color:var(--muted-strong)]"
+                          htmlFor={`manualNote:${type}:${slot}`}
+                        >
+                          Nota opcional
+                        </label>
+                        <Input
+                          id={`manualNote:${type}:${slot}`}
+                          name={`manualNote:${type}:${slot}`}
+                          placeholder="Ej. Valor conversado con proveedor o servicio referencial del taller"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </Card>

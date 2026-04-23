@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { UserRole } from "@prisma/client";
+import { BudgetItemType, UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
 import type { ActionState } from "@/lib/form-state";
@@ -23,6 +23,85 @@ function parseReferenceSelections(formData: FormData) {
       quantity: Number(value),
     }))
     .filter((entry) => Number.isFinite(entry.quantity) && entry.quantity > 0);
+}
+
+function parseManualSelections(formData: FormData) {
+  type DraftManualSelectionInput = {
+    itemType: BudgetItemType;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    note: string | undefined;
+  };
+
+  const grouped = new Map<
+    string,
+    {
+      itemType?: BudgetItemType;
+      description?: string;
+      quantity?: number;
+      unitPrice?: number;
+      note?: string;
+    }
+  >();
+
+  for (const [key, rawValue] of formData.entries()) {
+    const value = String(rawValue);
+
+    if (key.startsWith("manualDescription:")) {
+      const [, rawType, slot] = key.split(":");
+      if (!Object.values(BudgetItemType).includes(rawType as BudgetItemType)) {
+        continue;
+      }
+      grouped.set(`${rawType}:${slot}`, {
+        ...grouped.get(`${rawType}:${slot}`),
+        itemType: rawType as BudgetItemType,
+        description: value,
+      });
+    }
+
+    if (key.startsWith("manualQuantity:")) {
+      const [, rawType, slot] = key.split(":");
+      grouped.set(`${rawType}:${slot}`, {
+        ...grouped.get(`${rawType}:${slot}`),
+        quantity: Number(value),
+      });
+    }
+
+    if (key.startsWith("manualPrice:")) {
+      const [, rawType, slot] = key.split(":");
+      grouped.set(`${rawType}:${slot}`, {
+        ...grouped.get(`${rawType}:${slot}`),
+        unitPrice: Number(value),
+      });
+    }
+
+    if (key.startsWith("manualNote:")) {
+      const [, rawType, slot] = key.split(":");
+      grouped.set(`${rawType}:${slot}`, {
+        ...grouped.get(`${rawType}:${slot}`),
+        note: value,
+      });
+    }
+  }
+
+  return Array.from(grouped.values())
+    .map((entry) => ({
+      itemType: entry.itemType,
+      description: entry.description?.trim() ?? "",
+      quantity: entry.quantity ?? 0,
+      unitPrice: entry.unitPrice ?? 0,
+      note: entry.note?.trim() || undefined,
+    }))
+    .filter(
+      (entry): entry is DraftManualSelectionInput =>
+        Boolean(entry.itemType) &&
+        entry.description.length > 0 &&
+        Number.isFinite(entry.quantity) &&
+        entry.quantity > 0 &&
+        Number.isFinite(entry.unitPrice) &&
+        entry.unitPrice >= 0,
+    );
 }
 
 function parseLineUpdates(formData: FormData) {
@@ -86,6 +165,7 @@ export async function createBudgetDraftAction(
         summary: String(formData.get("summary") ?? ""),
       },
       parseReferenceSelections(formData),
+      parseManualSelections(formData),
       session.user.id,
     );
 

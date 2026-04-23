@@ -80,6 +80,19 @@ El contenedor de MecaniaOS usa el puerto host `5433` para no chocar con otros pr
 
 ## Ejecucion local
 
+### Si cambias a una rama nueva de Sprint 2
+
+Cada vez que hagas checkout de una rama que cambie Prisma o datos base, corre estos pasos antes de probar:
+
+```bash
+pnpm install
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+```
+
+Esto es especialmente importante en ramas como inventario y presupuestos, porque si no corres el seed puedes quedar con catalogos vacios y el flujo se ve roto aunque el codigo este bien.
+
 1. Instalar dependencias:
 
 ```bash

@@ -15,6 +15,14 @@ type DraftReferenceSelection = {
   quantity: number;
 };
 
+type DraftManualSelection = {
+  itemType: BudgetItemType;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  note?: string;
+};
+
 type DraftLineUpdate = {
   id: string;
   quantity: number;
@@ -143,6 +151,7 @@ export async function getBudgetById(id: string) {
 export async function createBudgetDraft(
   input: unknown,
   selections: DraftReferenceSelection[],
+  manualSelections: DraftManualSelection[],
   actorId: string,
 ) {
   const data = createBudgetSchema.parse(input);
@@ -183,11 +192,22 @@ export async function createBudgetDraft(
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-  if (selectedReferences.length === 0) {
+  const manualItems = manualSelections.map((selection) => ({
+    itemType: selection.itemType,
+    description: selection.description,
+    quantity: selection.quantity,
+    unitPrice: selection.unitPrice,
+    subtotal: selection.quantity * selection.unitPrice,
+    sourceLabel: "Ingreso manual",
+    note: selection.note || "Item agregado manualmente fuera del catalogo.",
+  }));
+
+  if (selectedReferences.length === 0 && manualItems.length === 0) {
     throw new AppError("Debes seleccionar al menos un repuesto o servicio para el presupuesto", 422);
   }
 
-  const totals = calculateTotals(selectedReferences);
+  const draftItems = [...selectedReferences, ...manualItems];
+  const totals = calculateTotals(draftItems);
 
   return budgetRepository.createDraft({
     budgetNumber: await createBudgetNumber(),
@@ -196,7 +216,7 @@ export async function createBudgetDraft(
     title: data.title,
     summary: data.summary,
     createdById: actorId,
-    items: selectedReferences,
+    items: draftItems,
     ...totals,
   });
 }
