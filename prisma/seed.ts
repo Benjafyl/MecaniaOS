@@ -12,6 +12,8 @@ import {
   UserRole,
   VehicleFuelType,
   VehicleTransmissionType,
+  StockMovementSourceType,
+  StockMovementType,
   WorkOrderStatus,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
@@ -31,9 +33,12 @@ async function main() {
   await prisma.selfInspectionAnswer.deleteMany();
   await prisma.selfInspectionVehicleSnapshot.deleteMany();
   await prisma.selfInspection.deleteMany();
+  await prisma.stockMovement.deleteMany();
+  await prisma.workOrderPart.deleteMany();
   await prisma.workOrderStatusLog.deleteMany();
   await prisma.workOrderEvidence.deleteMany();
   await prisma.workOrder.deleteMany();
+  await prisma.repuesto.deleteMany();
   await prisma.vehicle.deleteMany();
   await prisma.client.deleteMany();
   await prisma.session.deleteMany();
@@ -233,6 +238,91 @@ async function main() {
         note: "Registro visual del servicio de mantencion",
       },
     ],
+  });
+
+  const [brakePads, oilFilter, engineOil] = await Promise.all([
+    prisma.repuesto.create({
+      data: {
+        name: "Pastillas de freno delanteras",
+        code: "PF-DEL-001",
+        currentStock: 8,
+        minimumStock: 4,
+      },
+    }),
+    prisma.repuesto.create({
+      data: {
+        name: "Filtro de aceite",
+        code: "FA-001",
+        currentStock: 3,
+        minimumStock: 3,
+      },
+    }),
+    prisma.repuesto.create({
+      data: {
+        name: "Aceite sintetico 5W30",
+        code: "ACE-5W30",
+        currentStock: 12,
+        minimumStock: 6,
+      },
+    }),
+  ]);
+
+  await prisma.stockMovement.createMany({
+    data: [
+      {
+        repuestoId: brakePads.id,
+        type: StockMovementType.INITIAL,
+        quantity: 10,
+        previousStock: 0,
+        newStock: 10,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: brakePads.id,
+        createdById: admin.id,
+      },
+      {
+        repuestoId: brakePads.id,
+        type: StockMovementType.OUT,
+        quantity: -2,
+        previousStock: 10,
+        newStock: 8,
+        reason: `Consumo en orden ${workOrderA.orderNumber}`,
+        sourceType: StockMovementSourceType.WORK_ORDER,
+        sourceId: workOrderA.id,
+        createdById: mechanic.id,
+      },
+      {
+        repuestoId: oilFilter.id,
+        type: StockMovementType.INITIAL,
+        quantity: 3,
+        previousStock: 0,
+        newStock: 3,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: oilFilter.id,
+        createdById: admin.id,
+      },
+      {
+        repuestoId: engineOil.id,
+        type: StockMovementType.INITIAL,
+        quantity: 12,
+        previousStock: 0,
+        newStock: 12,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: engineOil.id,
+        createdById: admin.id,
+      },
+    ],
+  });
+
+  await prisma.workOrderPart.create({
+    data: {
+      workOrderId: workOrderA.id,
+      repuestoId: brakePads.id,
+      quantity: 2,
+      createdById: mechanic.id,
+    },
   });
 
   const publicDraftToken = "demo-self-inspection-2026";
