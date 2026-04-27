@@ -1,6 +1,6 @@
 # MecaniaOS
 
-MVP de un sistema de seguimiento de mantenciones mecanicas para talleres.
+Plataforma de gestion operativa para talleres mecanicos.
 
 ## Stack
 
@@ -91,7 +91,7 @@ pnpm db:push
 pnpm db:seed
 ```
 
-Esto es especialmente importante en ramas como inventario y presupuestos, porque si no corres el seed puedes quedar con catalogos vacios y el flujo se ve roto aunque el codigo este bien.
+Esto es especialmente importante en ramas como inventario y presupuestos, porque si no cargas los datos iniciales puedes quedar con catalogos vacios y el flujo se ve roto aunque el codigo este bien.
 
 1. Instalar dependencias:
 
@@ -117,7 +117,7 @@ pnpm db:generate
 pnpm db:push
 ```
 
-5. Cargar datos de prueba:
+5. Cargar datos iniciales:
 
 ```bash
 pnpm db:seed
@@ -150,10 +150,9 @@ pnpm docker:app:up
 
 Eso levanta `db` y `app` juntos en contenedores.
 
-## Credenciales seed
+## Datos iniciales
 
-- Administrador: `admin@mecaniaos.local` / `Admin1234!`
-- Mecanico: `mecanico@mecaniaos.local` / `Mechanic1234!`
+`pnpm db:seed` carga catalogos y registros base para desarrollo local.
 
 ## Scripts
 

@@ -133,11 +133,11 @@ El flujo de cliente es wizard multipaso:
 - condiciona campos detalle cuando hay testigos, fugas o diagnostico previo.
 - bloqueo de envio si faltan respuestas obligatorias.
 
-## Seeds
+## Datos iniciales
 
-El seed agrega:
+La carga inicial agrega:
 
-- una autoinspeccion `in_progress` con enlace seguro demo.
+- una autoinspeccion `in_progress` con enlace seguro de acceso.
 - una autoinspeccion `reviewed` con fotos, revision interna y alertas criticas.
 
 ## Integraciones futuras previstas

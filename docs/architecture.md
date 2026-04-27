@@ -2,7 +2,7 @@
 
 ## Decision principal
 
-MecaniaOS usa un **monolito modular** con `Next.js` como frontend y backend de la demo. Esta decision prioriza velocidad de entrega, coherencia funcional y menor complejidad operativa, manteniendo separacion clara por dominios para evolucionar el sistema despues.
+MecaniaOS usa un **monolito modular** con `Next.js` como frontend y backend de la plataforma. Esta decision prioriza velocidad de entrega, coherencia funcional y menor complejidad operativa, manteniendo separacion clara por dominios para evolucionar el sistema despues.
 
 ## Enfoque de producto soportado por la arquitectura
 
