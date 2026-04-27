@@ -109,6 +109,13 @@ export const workOrderRepository = {
             active: true,
           },
         },
+        budget: {
+          include: {
+            items: {
+              orderBy: [{ itemType: "asc" }, { description: "asc" }],
+            },
+          },
+        },
         assignedTechnician: {
           select: {
             id: true,

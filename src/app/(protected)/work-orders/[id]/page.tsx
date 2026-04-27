@@ -19,6 +19,7 @@ import {
 } from "@/app/(protected)/work-orders/parts-usage-form";
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
+import { BUDGET_ITEM_TYPE_LABELS, BUDGET_STATUS_LABELS } from "@/modules/budgets/budget.constants";
 
 type WorkOrderDetailPageProps = {
   params: Promise<{
@@ -60,6 +61,11 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
           </div>
 
           <div className="flex gap-3">
+            {workOrder.budget ? (
+              <Link href={`/budgets/${workOrder.budget.id}`}>
+                <Button variant="secondary">Ver presupuesto</Button>
+              </Link>
+            ) : null}
             <Link href={`/vehicles/${workOrder.vehicleId}`}>
               <Button variant="secondary">Ver vehiculo</Button>
             </Link>
@@ -76,6 +82,36 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
             <h2 className="font-heading text-2xl font-semibold">Resumen tecnico</h2>
 
             <div className="mt-5 space-y-3 text-sm text-[color:var(--muted-strong)]">
+              {workOrder.budget ? (
+                <div className="rounded-xl border border-[rgba(22,163,74,0.18)] bg-[rgba(22,163,74,0.05)] p-4">
+                  <p className="text-sm font-semibold text-[#166534]">
+                    Origen: presupuesto {workOrder.budget.budgetNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-[#166534]">
+                    Estado origen: {BUDGET_STATUS_LABELS[workOrder.budget.status]}
+                  </p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Repuestos</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.subtotalParts.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Mano de obra</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.subtotalLabor.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Total aprobado</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.totalAmount.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <p>
                 <span className="font-semibold text-[color:var(--foreground)]">Diagnostico:</span>{" "}
                 {workOrder.initialDiagnosis ?? "Sin diagnostico inicial"}
@@ -102,6 +138,42 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               </p>
             </div>
           </Card>
+
+          {workOrder.budget ? (
+            <Card className="rounded-2xl">
+              <h2 className="font-heading text-2xl font-semibold">Items del presupuesto base</h2>
+              <p className="mt-2 text-sm text-[color:var(--muted)]">
+                Referencia directa de los repuestos, mano de obra y suministros que dieron origen a esta OT.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {workOrder.budget.items.map((item) => (
+                  <div
+                    className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3"
+                    key={item.id}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                          {item.description}
+                        </p>
+                        <p className="mt-1 text-xs text-[color:var(--muted)]">
+                          {BUDGET_ITEM_TYPE_LABELS[item.itemType]} / {item.referenceCode ?? "Sin codigo"}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-[color:var(--muted-strong)]">
+                        <p>Cantidad: {item.quantity}</p>
+                        <p>Unitario: ${item.unitPrice.toLocaleString("es-CL")}</p>
+                        <p className="font-semibold text-[color:var(--foreground)]">
+                          Subtotal: ${item.subtotal.toLocaleString("es-CL")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
 
           <Card className="rounded-2xl">
             <h2 className="font-heading text-2xl font-semibold">Asignacion</h2>
