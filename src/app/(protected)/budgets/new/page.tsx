@@ -27,11 +27,21 @@ export default async function NewBudgetPage() {
         }))}
         selfInspections={context.selfInspections.map((inspection) => ({
           id: inspection.id,
+          customerId: inspection.customer.id,
           customerName: inspection.customer.fullName,
+          vehicleId: inspection.vehicleId,
           vehicleLabel: inspection.vehicle
             ? `${inspection.vehicle.make} ${inspection.vehicle.model} / ${inspection.vehicle.plate ?? inspection.vehicle.vin}`
             : "Vehiculo pendiente",
           reviewedAt: inspection.reviewedAt,
+        }))}
+        inventoryParts={context.inventoryParts.map((repuesto) => ({
+          id: repuesto.id,
+          name: repuesto.name,
+          code: repuesto.code,
+          unitPrice: repuesto.unitPrice,
+          currentStock: repuesto.currentStock,
+          minimumStock: repuesto.minimumStock,
         }))}
         references={context.references.map((reference) => ({
           id: reference.id,

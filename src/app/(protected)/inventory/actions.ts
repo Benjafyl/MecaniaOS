@@ -24,6 +24,7 @@ export async function createRepuestoAction(
       {
         name: String(formData.get("name") ?? ""),
         code: String(formData.get("code") ?? ""),
+        unitPrice: String(formData.get("unitPrice") ?? ""),
         initialStock: String(formData.get("initialStock") ?? ""),
         minimumStock: String(formData.get("minimumStock") ?? ""),
       },

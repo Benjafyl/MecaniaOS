@@ -15,14 +15,108 @@ import {
   updateBudgetDraft,
 } from "@/modules/budgets/budget.service";
 
-function parseReferenceSelections(formData: FormData) {
-  return Array.from(formData.entries())
-    .filter(([key]) => key.startsWith("referenceQty:"))
-    .map(([key, value]) => ({
-      referenceCatalogId: key.replace("referenceQty:", ""),
-      quantity: Number(value),
-    }))
-    .filter((entry) => Number.isFinite(entry.quantity) && entry.quantity > 0);
+function parseCatalogSelections(formData: FormData) {
+  const partGrouped = new Map<
+    string,
+    {
+      itemId?: string;
+      quantity?: number;
+    }
+  >();
+  const referenceGrouped = new Map<
+    string,
+    {
+      itemType?: BudgetItemType;
+      itemId?: string;
+      quantity?: number;
+    }
+  >();
+
+  for (const [key, rawValue] of formData.entries()) {
+    const value = String(rawValue).trim();
+
+    if (key.startsWith("partItem:")) {
+      const slot = key.replace("partItem:", "");
+      partGrouped.set(slot, {
+        ...partGrouped.get(slot),
+        itemId: value,
+      });
+      continue;
+    }
+
+    if (key.startsWith("partQuantity:")) {
+      const slot = key.replace("partQuantity:", "");
+      partGrouped.set(slot, {
+        ...partGrouped.get(slot),
+        quantity: Number(value),
+      });
+      continue;
+    }
+
+    if (key.startsWith("referenceItem:")) {
+      const [, rawType, slot] = key.split(":");
+      if (!Object.values(BudgetItemType).includes(rawType as BudgetItemType)) {
+        continue;
+      }
+
+      referenceGrouped.set(`${rawType}:${slot}`, {
+        ...referenceGrouped.get(`${rawType}:${slot}`),
+        itemType: rawType as BudgetItemType,
+        itemId: value,
+      });
+      continue;
+    }
+
+    if (key.startsWith("referenceQuantity:")) {
+      const [, rawType, slot] = key.split(":");
+      if (!Object.values(BudgetItemType).includes(rawType as BudgetItemType)) {
+        continue;
+      }
+
+      referenceGrouped.set(`${rawType}:${slot}`, {
+        ...referenceGrouped.get(`${rawType}:${slot}`),
+        itemType: rawType as BudgetItemType,
+        quantity: Number(value),
+      });
+    }
+  }
+
+  return [
+    ...Array.from(partGrouped.values()).flatMap((entry) => {
+      const itemId = entry.itemId?.trim() ?? "";
+      const quantity = entry.quantity ?? 0;
+
+      if (!itemId || !Number.isFinite(quantity) || quantity <= 0) {
+        return [];
+      }
+
+      return [
+        {
+          source: "inventoryPart" as const,
+          itemType: BudgetItemType.PART,
+          itemId,
+          quantity,
+        },
+      ];
+    }),
+    ...Array.from(referenceGrouped.values()).flatMap((entry) => {
+      const itemId = entry.itemId?.trim() ?? "";
+      const quantity = entry.quantity ?? 0;
+
+      if (!entry.itemType || !itemId || !Number.isFinite(quantity) || quantity <= 0) {
+        return [];
+      }
+
+      return [
+        {
+          source: "referenceCatalog" as const,
+          itemType: entry.itemType,
+          itemId,
+          quantity,
+        },
+      ];
+    }),
+  ];
 }
 
 function parseManualSelections(formData: FormData) {
@@ -161,10 +255,11 @@ export async function createBudgetDraftAction(
       {
         clientId: String(formData.get("clientId") ?? ""),
         vehicleId: String(formData.get("vehicleId") ?? ""),
+        selfInspectionId: String(formData.get("selfInspectionId") ?? ""),
         title: String(formData.get("title") ?? ""),
         summary: String(formData.get("summary") ?? ""),
       },
-      parseReferenceSelections(formData),
+      parseCatalogSelections(formData),
       parseManualSelections(formData),
       session.user.id,
     );

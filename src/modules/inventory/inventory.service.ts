@@ -111,6 +111,7 @@ export async function createRepuesto(input: unknown, actorId: string) {
       data: {
         name: data.name,
         code: data.code,
+        unitPrice: data.unitPrice,
         currentStock: 0,
         minimumStock: data.minimumStock,
       },

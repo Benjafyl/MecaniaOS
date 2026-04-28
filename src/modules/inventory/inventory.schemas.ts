@@ -31,6 +31,7 @@ const positiveQuantity = integerFromForm().pipe(
 export const createRepuestoSchema = z.object({
   name: requiredText(2, 120),
   code: requiredText(1, 80).transform((value) => value.toUpperCase()),
+  unitPrice: nonNegativeStock,
   initialStock: nonNegativeStock,
   minimumStock: nonNegativeStock,
 });
