@@ -31,6 +31,16 @@ export function RepuestoForm() {
         <div className="space-y-2">
           <label
             className="text-sm font-medium text-[color:var(--muted-strong)]"
+            htmlFor="unitPrice"
+          >
+            Precio referencial
+          </label>
+          <Input defaultValue={0} id="unitPrice" min={0} name="unitPrice" type="number" />
+        </div>
+
+        <div className="space-y-2">
+          <label
+            className="text-sm font-medium text-[color:var(--muted-strong)]"
             htmlFor="initialStock"
           >
             Stock inicial

@@ -10,8 +10,10 @@ import {
   updateBudgetDraftSchema,
 } from "@/modules/budgets/budget.schemas";
 
-type DraftReferenceSelection = {
-  referenceCatalogId: string;
+type DraftCatalogSelection = {
+  source: "inventoryPart" | "referenceCatalog";
+  itemType: BudgetItemType;
+  itemId: string;
   quantity: number;
 };
 
@@ -124,7 +126,8 @@ export async function listBudgets(search?: string) {
 }
 
 export async function getBudgetCreateContext() {
-  const [clients, references, selfInspections] = await budgetRepository.listCreateContext();
+  const [clients, references, inventoryParts, selfInspections] =
+    await budgetRepository.listCreateContext();
 
   return {
     clients,
@@ -135,6 +138,7 @@ export async function getBudgetCreateContext() {
       })),
     ),
     references,
+    inventoryParts,
     selfInspections,
   };
 }
@@ -151,12 +155,12 @@ export async function getBudgetById(id: string) {
 
 export async function createBudgetDraft(
   input: unknown,
-  selections: DraftReferenceSelection[],
+  selections: DraftCatalogSelection[],
   manualSelections: DraftManualSelection[],
   actorId: string,
 ) {
   const data = createBudgetSchema.parse(input);
-  const { clients, references, selfInspections } = await getBudgetCreateContext();
+  const { clients, references, inventoryParts, selfInspections } = await getBudgetCreateContext();
 
   let clientId = data.clientId ?? "";
   let vehicleId = data.vehicleId ?? "";
@@ -189,9 +193,31 @@ export async function createBudgetDraft(
     }
   }
 
-  const selectedReferences = selections
+  const selectedCatalogItems = selections
     .map((selection) => {
-      const reference = references.find((entry) => entry.id === selection.referenceCatalogId);
+      if (selection.source === "inventoryPart") {
+        const repuesto = inventoryParts.find((entry) => entry.id === selection.itemId);
+
+        if (!repuesto) {
+          return null;
+        }
+
+        return {
+          itemType: BudgetItemType.PART,
+          description: repuesto.name,
+          referenceCode: repuesto.code,
+          quantity: selection.quantity,
+          unitPrice: repuesto.unitPrice,
+          subtotal: selection.quantity * repuesto.unitPrice,
+          sourceLabel: "Inventario",
+          note:
+            repuesto.currentStock > 0
+              ? `Precio tomado desde inventario. Stock actual: ${repuesto.currentStock}.`
+              : "Precio tomado desde inventario.",
+        };
+      }
+
+      const reference = references.find((entry) => entry.id === selection.itemId);
 
       if (!reference) {
         return null;
@@ -222,11 +248,11 @@ export async function createBudgetDraft(
     note: selection.note || "Item agregado manualmente fuera del catalogo.",
   }));
 
-  if (selectedReferences.length === 0 && manualItems.length === 0) {
+  if (selectedCatalogItems.length === 0 && manualItems.length === 0) {
     throw new AppError("Debes seleccionar al menos un repuesto o servicio para el presupuesto", 422);
   }
 
-  const draftItems = [...selectedReferences, ...manualItems];
+  const draftItems = [...selectedCatalogItems, ...manualItems];
   const totals = calculateTotals(draftItems);
 
   return budgetRepository.createDraft({

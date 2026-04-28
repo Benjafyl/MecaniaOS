@@ -35,6 +35,7 @@ export const inventoryRepository = {
         id: true,
         name: true,
         code: true,
+        unitPrice: true,
         currentStock: true,
         minimumStock: true,
       },

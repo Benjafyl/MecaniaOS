@@ -110,6 +110,9 @@ export const budgetRepository = {
         },
         orderBy: [{ itemType: "asc" }, { name: "asc" }],
       }),
+      prisma.repuesto.findMany({
+        orderBy: [{ name: "asc" }],
+      }),
       prisma.selfInspection.findMany({
         where: {
           status: SelfInspectionStatus.REVIEWED,

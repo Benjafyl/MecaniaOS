@@ -410,6 +410,7 @@ async function main() {
       data: {
         name: "Pastillas de freno delanteras",
         code: "PF-DEL-001",
+        unitPrice: 42990,
         currentStock: 8,
         minimumStock: 4,
       },
@@ -418,6 +419,7 @@ async function main() {
       data: {
         name: "Filtro de aceite",
         code: "FA-001",
+        unitPrice: 19990,
         currentStock: 3,
         minimumStock: 3,
       },
@@ -426,6 +428,7 @@ async function main() {
       data: {
         name: "Aceite sintetico 5W30",
         code: "ACE-5W30",
+        unitPrice: 35990,
         currentStock: 12,
         minimumStock: 6,
       },

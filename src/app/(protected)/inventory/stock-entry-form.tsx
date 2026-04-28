@@ -14,6 +14,7 @@ type InventoryOption = {
   id: string;
   name: string;
   code: string;
+  unitPrice: number;
   currentStock: number;
 };
 
@@ -30,7 +31,8 @@ export function StockEntryForm({ repuestos }: { repuestos: InventoryOption[] }) 
           <option value="">Selecciona un repuesto</option>
           {repuestos.map((repuesto) => (
             <option key={repuesto.id} value={repuesto.id}>
-              {repuesto.name} / {repuesto.code} / stock {repuesto.currentStock}
+              {repuesto.name} / {repuesto.code} / {repuesto.unitPrice.toLocaleString("es-CL")} CLP / stock{" "}
+              {repuesto.currentStock}
             </option>
           ))}
         </Select>
