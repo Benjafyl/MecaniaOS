@@ -6,14 +6,21 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { listInventoryOptions } from "@/modules/inventory/inventory.service";
 import {
   getAssignableMechanics,
   getWorkOrderById,
 } from "@/modules/work-orders/work-order.service";
+import { isWorkOrderEvidenceStorageConfigured } from "@/modules/work-orders/work-order.storage";
 import { AssignmentForm } from "@/app/(protected)/work-orders/assignment-form";
 import { EvidenceUploadForm } from "@/app/(protected)/work-orders/evidence-upload-form";
+import {
+  ExistingPartUsageForm,
+  PartsUsageForm,
+} from "@/app/(protected)/work-orders/parts-usage-form";
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
+import { BUDGET_ITEM_TYPE_LABELS, BUDGET_STATUS_LABELS } from "@/modules/budgets/budget.constants";
 
 type WorkOrderDetailPageProps = {
   params: Promise<{
@@ -23,6 +30,7 @@ type WorkOrderDetailPageProps = {
 
 export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPageProps) {
   const { id } = await params;
+  const evidenceUploadsEnabled = isWorkOrderEvidenceStorageConfigured();
   const workOrder = await getWorkOrderById(id).catch((error) => {
     if (normalizeError(error).statusCode === 404) {
       notFound();
@@ -30,7 +38,10 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
 
     throw error;
   });
-  const mechanics = await getAssignableMechanics();
+  const [mechanics, repuestos] = await Promise.all([
+    getAssignableMechanics(),
+    listInventoryOptions(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -52,6 +63,11 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
           </div>
 
           <div className="flex gap-3">
+            {workOrder.budget ? (
+              <Link href={`/budgets/${workOrder.budget.id}`}>
+                <Button variant="secondary">Ver presupuesto</Button>
+              </Link>
+            ) : null}
             <Link href={`/vehicles/${workOrder.vehicleId}`}>
               <Button variant="secondary">Ver vehiculo</Button>
             </Link>
@@ -68,6 +84,36 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
             <h2 className="font-heading text-2xl font-semibold">Resumen tecnico</h2>
 
             <div className="mt-5 space-y-3 text-sm text-[color:var(--muted-strong)]">
+              {workOrder.budget ? (
+                <div className="rounded-xl border border-[rgba(22,163,74,0.18)] bg-[rgba(22,163,74,0.05)] p-4">
+                  <p className="text-sm font-semibold text-[#166534]">
+                    Origen: presupuesto {workOrder.budget.budgetNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-[#166534]">
+                    Estado origen: {BUDGET_STATUS_LABELS[workOrder.budget.status]}
+                  </p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Repuestos</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.subtotalParts.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Mano de obra</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.subtotalLabor.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#166534]">Total aprobado</p>
+                      <p className="mt-1 text-lg font-semibold text-[#14532d]">
+                        ${workOrder.budget.totalAmount.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <p>
                 <span className="font-semibold text-[color:var(--foreground)]">Diagnostico:</span>{" "}
                 {workOrder.initialDiagnosis ?? "Sin diagnostico inicial"}
@@ -94,6 +140,42 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               </p>
             </div>
           </Card>
+
+          {workOrder.budget ? (
+            <Card className="rounded-2xl">
+              <h2 className="font-heading text-2xl font-semibold">Items del presupuesto base</h2>
+              <p className="mt-2 text-sm text-[color:var(--muted)]">
+                Referencia directa de los repuestos, mano de obra y suministros que dieron origen a esta OT.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {workOrder.budget.items.map((item) => (
+                  <div
+                    className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-strong)] px-4 py-3"
+                    key={item.id}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                          {item.description}
+                        </p>
+                        <p className="mt-1 text-xs text-[color:var(--muted)]">
+                          {BUDGET_ITEM_TYPE_LABELS[item.itemType]} / {item.referenceCode ?? "Sin codigo"}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-[color:var(--muted-strong)]">
+                        <p>Cantidad: {item.quantity}</p>
+                        <p>Unitario: ${item.unitPrice.toLocaleString("es-CL")}</p>
+                        <p className="font-semibold text-[color:var(--foreground)]">
+                          Subtotal: ${item.subtotal.toLocaleString("es-CL")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
 
           <Card className="rounded-2xl">
             <h2 className="font-heading text-2xl font-semibold">Asignacion</h2>
@@ -123,6 +205,56 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               <StatusForm currentStatus={workOrder.status} orderId={workOrder.id} />
             </div>
           </Card>
+
+          <Card className="rounded-2xl">
+            <h2 className="font-heading text-2xl font-semibold">Repuestos utilizados</h2>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">
+              Registra la cantidad final usada por repuesto. Si cambias una cantidad, solo se mueve
+              la diferencia de stock.
+            </p>
+
+            <div className="mt-5">
+              <PartsUsageForm orderId={workOrder.id} repuestos={repuestos} />
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {workOrder.parts.map((part) => (
+                <div
+                  className="rounded-xl border border-[color:var(--border)] bg-white/70 p-4"
+                  key={part.id}
+                >
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="font-semibold text-[color:var(--foreground)]">
+                        {part.repuesto.name}
+                      </p>
+                      <p className="mt-1 text-sm text-[color:var(--muted-strong)]">
+                        {part.repuesto.code} / usado {part.quantity} / stock actual{" "}
+                        {part.repuesto.currentStock}
+                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">
+                        Registrado por {part.createdBy.name} / {formatDateTime(part.createdAt)}
+                      </p>
+                    </div>
+
+                    <ExistingPartUsageForm
+                      orderId={workOrder.id}
+                      part={{
+                        repuestoId: part.repuestoId,
+                        quantity: part.quantity,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {workOrder.parts.length === 0 ? (
+                <p className="text-sm text-[color:var(--muted)]">
+                  Aun no hay repuestos descontados en esta orden.
+                </p>
+              ) : null}
+            </div>
+          </Card>
         </div>
 
         <Card className="rounded-2xl">
@@ -134,7 +266,19 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               </p>
             </div>
 
-            <EvidenceUploadForm orderId={workOrder.id} />
+            {evidenceUploadsEnabled ? (
+              <EvidenceUploadForm orderId={workOrder.id} />
+            ) : (
+              <div className="rounded-xl border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] p-4">
+                <p className="text-sm font-semibold text-[#b45309]">
+                  La carga de evidencias no esta habilitada en este entorno.
+                </p>
+                <p className="mt-1 text-sm text-[#b45309]">
+                  La orden sigue funcionando normal, pero falta configurar Supabase Storage
+                  para subir imagenes.
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               {workOrder.evidences.map((evidence) => (

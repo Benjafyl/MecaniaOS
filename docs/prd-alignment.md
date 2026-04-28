@@ -116,13 +116,13 @@ Faltan roles operativos y externos del PRD:
 Desde ahora la documentacion del repo deberia describir MecaniaOS como:
 
 - sistema de gestion operativa de taller mecanico.
-- demo funcional de un solo taller.
+- plataforma operativa para un solo taller en su configuracion actual.
 - producto con nucleo ya implementado y roadmap claro hacia presupuestos, progreso por tareas y portales externos.
 
 No deberia seguir describirse como:
 
 - sistema generico de mantenciones.
-- MVP ya completo.
+- una version cerrada sin roadmap ni crecimiento pendiente.
 - proyecto donde cotizaciones, evidencia o portal cliente son solo ideas futuras, porque parte de esa base ya existe y otra parte ya es compromiso del PRD.
 
 ## Siguiente corte recomendado

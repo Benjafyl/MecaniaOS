@@ -143,6 +143,32 @@ enum ReviewRecommendedNextStep {
   FOLLOW_UP_CALL
 }
 
+enum StockMovementType {
+  INITIAL
+  ENTRY
+  OUT
+  ADJUSTMENT
+}
+
+enum StockMovementSourceType {
+  INVENTORY
+  WORK_ORDER
+}
+
+enum BudgetStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  CONVERTED_TO_WORK_ORDER
+}
+
+enum BudgetItemType {
+  PART
+  LABOR
+  SUPPLY
+}
+
 model User {
   id                          String                    @id @default(cuid())
   name                        String
@@ -164,6 +190,11 @@ model User {
   selfInspectionNotes         SelfInspectionNote[]      @relation("SelfInspectionNoteCreatedBy")
   selfInspectionReviews       SelfInspectionReview[]    @relation("SelfInspectionReviewReviewedBy")
   selfInspectionStatusChanges SelfInspectionStatusLog[] @relation("SelfInspectionStatusChangedBy")
+  stockMovements              StockMovement[]           @relation("StockMovementCreatedBy")
+  workOrderParts              WorkOrderPart[]           @relation("WorkOrderPartCreatedBy")
+  createdBudgets              Budget[]                  @relation("BudgetCreatedBy")
+  updatedBudgets              Budget[]                  @relation("BudgetUpdatedBy")
+  budgetStatusChanges         BudgetStatusLog[]
 }
 
 model Session {
@@ -191,6 +222,7 @@ model Client {
   vehicles        Vehicle[]
   workOrders      WorkOrder[]
   selfInspections SelfInspection[]
+  budgets         Budget[]
 
   @@index([fullName])
   @@index([email])
@@ -213,41 +245,96 @@ model Vehicle {
   client          Client                   @relation(fields: [clientId], references: [id], onDelete: Restrict)
   workOrders      WorkOrder[]
   selfInspections SelfInspection[]
+  budgets         Budget[]
 
   @@index([clientId])
   @@index([make, model])
 }
 
 model WorkOrder {
-  id               String               @id @default(cuid())
-  clientId         String
-  vehicleId        String
-  orderNumber      String               @unique
-  reason           String
-  initialDiagnosis String?
-  status           WorkOrderStatus      @default(RECEIVED)
-  intakeDate       DateTime             @default(now())
-  estimatedDate    DateTime?
-  closedDate       DateTime?
-  notes            String?
-  createdById      String
-  updatedById      String?
+  id                   String               @id @default(cuid())
+  clientId             String
+  vehicleId            String
+  orderNumber          String               @unique
+  reason               String
+  initialDiagnosis     String?
+  status               WorkOrderStatus      @default(RECEIVED)
+  intakeDate           DateTime             @default(now())
+  estimatedDate        DateTime?
+  closedDate           DateTime?
+  notes                String?
+  createdById          String
+  updatedById          String?
   assignedTechnicianId String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  client           Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  vehicle          Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
-  createdBy        User                 @relation("WorkOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy        User?                @relation("WorkOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  assignedTechnician User?              @relation("WorkOrderAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
-  statusLogs       WorkOrderStatusLog[]
-  selfInspections  SelfInspection[]
-  evidences        WorkOrderEvidence[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  client               Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  vehicle              Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  createdBy            User                 @relation("WorkOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy            User?                @relation("WorkOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  assignedTechnician   User?                @relation("WorkOrderAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  statusLogs           WorkOrderStatusLog[]
+  selfInspections      SelfInspection[]
+  evidences            WorkOrderEvidence[]
+  parts                WorkOrderPart[]
+  budget           Budget?
 
   @@index([clientId, intakeDate])
   @@index([vehicleId, intakeDate])
   @@index([status])
   @@index([assignedTechnicianId, intakeDate])
+}
+
+model Repuesto {
+  id           String          @id @default(cuid())
+  name         String
+  code         String          @unique @db.VarChar(80)
+  unitPrice    Int             @default(0)
+  currentStock Int             @default(0)
+  minimumStock Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  movements    StockMovement[]
+  workOrders   WorkOrderPart[]
+
+  @@index([name])
+  @@index([currentStock, minimumStock])
+}
+
+model WorkOrderPart {
+  id          String    @id @default(cuid())
+  workOrderId String
+  repuestoId  String
+  quantity    Int
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  repuesto    Repuesto  @relation(fields: [repuestoId], references: [id], onDelete: Restrict)
+  createdBy   User      @relation("WorkOrderPartCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([workOrderId, repuestoId])
+  @@index([repuestoId])
+}
+
+model StockMovement {
+  id            String                   @id @default(cuid())
+  repuestoId    String
+  type          StockMovementType
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  reason        String?
+  sourceType    StockMovementSourceType?
+  sourceId      String?
+  createdById   String?
+  createdAt     DateTime                 @default(now())
+  repuesto      Repuesto                 @relation(fields: [repuestoId], references: [id], onDelete: Restrict)
+  createdBy     User?                    @relation("StockMovementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([repuestoId, createdAt])
+  @@index([type, createdAt])
+  @@index([sourceType, sourceId])
 }
 
 model WorkOrderEvidence {
@@ -314,6 +401,7 @@ model SelfInspection {
   notes                 SelfInspectionNote[]
   reviews               SelfInspectionReview[]
   statusLogs            SelfInspectionStatusLog[]
+  budgets               Budget[]
 
   @@index([customerId, createdAt])
   @@index([vehicleId, createdAt])
@@ -421,4 +509,94 @@ model SelfInspectionStatusLog {
   changedBy        User?                 @relation("SelfInspectionStatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
 
   @@index([selfInspectionId, changedAt])
+}
+
+model Budget {
+  id                String            @id @default(cuid())
+  budgetNumber      String            @unique
+  clientId          String
+  vehicleId         String
+  selfInspectionId  String?
+  workOrderId       String?           @unique
+  title             String
+  summary           String?
+  status            BudgetStatus      @default(DRAFT)
+  subtotalParts     Int               @default(0)
+  subtotalLabor     Int               @default(0)
+  subtotalSupplies  Int               @default(0)
+  totalAmount       Int               @default(0)
+  sentAt            DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  createdById       String
+  updatedById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  client            Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  vehicle           Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  selfInspection    SelfInspection?   @relation(fields: [selfInspectionId], references: [id], onDelete: SetNull)
+  workOrder         WorkOrder?        @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  createdBy         User              @relation("BudgetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy         User?             @relation("BudgetUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  items             BudgetItem[]
+  statusLogs        BudgetStatusLog[]
+
+  @@index([clientId, createdAt])
+  @@index([vehicleId, createdAt])
+  @@index([status, createdAt])
+  @@index([selfInspectionId])
+}
+
+model BudgetItem {
+  id                 String                 @id @default(cuid())
+  budgetId           String
+  referenceCatalogId String?
+  itemType           BudgetItemType
+  description        String
+  referenceCode      String?                @db.VarChar(40)
+  quantity           Int
+  unitPrice          Int
+  subtotal           Int
+  sourceLabel        String?
+  sourceUrl          String?
+  note               String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  budget             Budget                 @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  referenceCatalog   BudgetReferenceCatalog? @relation(fields: [referenceCatalogId], references: [id], onDelete: SetNull)
+
+  @@index([budgetId, itemType])
+  @@index([referenceCatalogId])
+}
+
+model BudgetStatusLog {
+  id             String        @id @default(cuid())
+  budgetId       String
+  previousStatus BudgetStatus?
+  nextStatus     BudgetStatus
+  note           String?
+  changedById    String
+  changedAt      DateTime      @default(now())
+  budget         Budget        @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  changedBy      User          @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([budgetId, changedAt])
+}
+
+model BudgetReferenceCatalog {
+  id                   String          @id @default(cuid())
+  itemType             BudgetItemType
+  name                 String
+  referenceCode        String?         @unique @db.VarChar(40)
+  unitPrice            Int
+  sourceLabel          String
+  sourceUrl            String?
+  vehicleCompatibility String?
+  active               Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  items                BudgetItem[]
+
+  @@index([itemType, active])
+  @@index([name])
 }

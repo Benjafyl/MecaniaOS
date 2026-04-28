@@ -22,6 +22,12 @@ const mimeExtensionMap: Record<string, string> = {
   "image/heif": ".heif",
 };
 
+export function isSelfInspectionStorageConfigured() {
+  return Boolean(
+    env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS,
+  );
+}
+
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
@@ -57,10 +63,14 @@ export async function saveInspectionPhotoFile(input: {
 }) {
   validateInspectionPhotoFile(input.file);
 
-  if (!env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS) {
-    throw new AppError("Falta configurar el bucket de self-inspections en el entorno.", 500);
+  if (!isSelfInspectionStorageConfigured()) {
+    throw new AppError(
+      "La carga de fotos de autoinspeccion no esta habilitada todavia en este entorno.",
+      500,
+    );
   }
 
+  const bucket = env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS as string;
   const extension = resolveFileExtension(input.file.name, input.file.type);
   const safeOriginalName = sanitizeFileName(
     path.basename(input.file.name, path.extname(input.file.name)) || input.photoType.toLowerCase(),
@@ -69,7 +79,7 @@ export async function saveInspectionPhotoFile(input: {
   const storageKey = path.posix.join(input.inspectionId, finalFileName);
 
   return uploadPublicStorageObject({
-    bucket: env.SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS,
+    bucket,
     storageKey,
     file: input.file,
   });

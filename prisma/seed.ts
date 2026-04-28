@@ -1,4 +1,6 @@
 import {
+  BudgetItemType,
+  BudgetStatus,
   PrismaClient,
   ReviewRecommendedNextStep,
   SelfInspectionAnswerType,
@@ -12,6 +14,8 @@ import {
   UserRole,
   VehicleFuelType,
   VehicleTransmissionType,
+  StockMovementSourceType,
+  StockMovementType,
   WorkOrderStatus,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
@@ -24,6 +28,10 @@ function hashAccessToken(token: string) {
 }
 
 async function main() {
+  await prisma.budgetStatusLog.deleteMany();
+  await prisma.budgetItem.deleteMany();
+  await prisma.budget.deleteMany();
+  await prisma.budgetReferenceCatalog.deleteMany();
   await prisma.selfInspectionStatusLog.deleteMany();
   await prisma.selfInspectionReview.deleteMany();
   await prisma.selfInspectionNote.deleteMany();
@@ -31,9 +39,12 @@ async function main() {
   await prisma.selfInspectionAnswer.deleteMany();
   await prisma.selfInspectionVehicleSnapshot.deleteMany();
   await prisma.selfInspection.deleteMany();
+  await prisma.stockMovement.deleteMany();
+  await prisma.workOrderPart.deleteMany();
   await prisma.workOrderStatusLog.deleteMany();
   await prisma.workOrderEvidence.deleteMany();
   await prisma.workOrder.deleteMany();
+  await prisma.repuesto.deleteMany();
   await prisma.vehicle.deleteMany();
   await prisma.client.deleteMany();
   await prisma.session.deleteMany();
@@ -126,6 +137,85 @@ async function main() {
     },
   });
 
+  const budgetReferences = await prisma.budgetReferenceCatalog.createManyAndReturn({
+    data: [
+      {
+        itemType: BudgetItemType.PART,
+        name: "Kit embrague Volkswagen Gol G6/G7 1.6 16V",
+        referenceCode: "REP-EMB-001",
+        unitPrice: 104990,
+        sourceLabel: "Rephaus Chile",
+        sourceUrl:
+          "https://rephaus.cl/products/kit-embrague-volkswagen-gol-g6-g7-saveiro-2010-en-adelante-1-6-16v",
+        vehicleCompatibility: "Volkswagen Gol / Saveiro 1.6 16V",
+      },
+      {
+        itemType: BudgetItemType.PART,
+        name: "Bateria 12V 70Ah 680 CCA",
+        referenceCode: "REP-ELE-001",
+        unitPrice: 114290,
+        sourceLabel: "Forzza",
+        sourceUrl: "https://www.forzza.cl/product/bateria-12v-70ah-680-cca-pd-rocket",
+        vehicleCompatibility: "Uso general liviano y camioneta",
+      },
+      {
+        itemType: BudgetItemType.PART,
+        name: "Filtro de aceite motor",
+        referenceCode: "REP-LUB-001",
+        unitPrice: 19990,
+        sourceLabel: "Rav Motor",
+        sourceUrl: "https://ravmotor.cl/collections/filtros-de-aceite",
+        vehicleCompatibility: "Aplicacion segun motor y filtro equivalente",
+      },
+      {
+        itemType: BudgetItemType.PART,
+        name: "Amortiguador delantero Toyota Hilux 2005-2024",
+        referenceCode: "REP-SUS-001",
+        unitPrice: 64990,
+        sourceLabel: "La Solucion de Repuestos",
+        sourceUrl:
+          "https://lasolucionderepuestos.cl/tienda/amortiguador-delantero-toyota-hilux-05-24/",
+        vehicleCompatibility: "Toyota Hilux 2005-2024",
+      },
+      {
+        itemType: BudgetItemType.LABOR,
+        name: "Cambio de aceite express",
+        referenceCode: "MO-LUB-001",
+        unitPrice: 12000,
+        sourceLabel: "Wild Biker",
+        sourceUrl: "https://www.wildbiker.cl/service-page/cambio-aceite-express",
+        vehicleCompatibility: "Servicio general",
+      },
+      {
+        itemType: BudgetItemType.LABOR,
+        name: "Cambio de pastillas de freno delanteras",
+        referenceCode: "MO-FRE-001",
+        unitPrice: 40000,
+        sourceLabel: "Autos Rojas",
+        sourceUrl: "https://autosrojas.cl/cambio-de-pastillas-de-freno/",
+        vehicleCompatibility: "Servicio general",
+      },
+      {
+        itemType: BudgetItemType.LABOR,
+        name: "Cambio de kit de embrague",
+        referenceCode: "MO-EMB-001",
+        unitPrice: 160000,
+        sourceLabel: "Quesuauto",
+        sourceUrl: "https://quesuauto.cl/collections/servicios/products/cambio-de-embrague",
+        vehicleCompatibility: "Servicio general",
+      },
+      {
+        itemType: BudgetItemType.LABOR,
+        name: "Cambio de amortiguadores delanteros",
+        referenceCode: "MO-SUS-001",
+        unitPrice: 114000,
+        sourceLabel: "Motoride",
+        sourceUrl: "https://www.motoride.cl/products/cambio-de-amortiguadores-y-espirales",
+        vehicleCompatibility: "Par delantero",
+      },
+    ],
+  });
+
   const workOrderA = await prisma.workOrder.create({
     data: {
       clientId: clientA.id,
@@ -210,6 +300,86 @@ async function main() {
     },
   });
 
+  const referenceMap = Object.fromEntries(
+    budgetReferences.map((reference) => [reference.referenceCode, reference]),
+  );
+
+  await prisma.budget.create({
+    data: {
+      budgetNumber: "PRES-2026-0001",
+      clientId: clientA.id,
+      vehicleId: vehicleA.id,
+      title: "Presupuesto frenos y mantencion ligera",
+      summary:
+        "Presupuesto preliminar basado en sintomas reportados por cliente y referencias reales de repuestos/mano de obra para validar aprobacion.",
+      status: BudgetStatus.DRAFT,
+      subtotalParts: 104980,
+      subtotalLabor: 52000,
+      subtotalSupplies: 0,
+      totalAmount: 156980,
+      createdById: admin.id,
+      updatedById: admin.id,
+      items: {
+        create: [
+          {
+            referenceCatalogId: referenceMap["REP-LUB-001"].id,
+            itemType: BudgetItemType.PART,
+            description: "Filtro de aceite motor",
+            referenceCode: "REP-LUB-001",
+            quantity: 1,
+            unitPrice: 19990,
+            subtotal: 19990,
+            sourceLabel: referenceMap["REP-LUB-001"].sourceLabel,
+            sourceUrl: referenceMap["REP-LUB-001"].sourceUrl,
+            note: "Precio referencial de mercado para filtro equivalente.",
+          },
+          {
+            referenceCatalogId: referenceMap["REP-ELE-001"].id,
+            itemType: BudgetItemType.PART,
+            description: "Bateria 12V 70Ah 680 CCA",
+            referenceCode: "REP-ELE-001",
+            quantity: 1,
+            unitPrice: 84990,
+            subtotal: 84990,
+            sourceLabel: referenceMap["REP-ELE-001"].sourceLabel,
+            sourceUrl: referenceMap["REP-ELE-001"].sourceUrl,
+            note: "Monto ajustado por opcion equivalente instalada en taller.",
+          },
+          {
+            referenceCatalogId: referenceMap["MO-LUB-001"].id,
+            itemType: BudgetItemType.LABOR,
+            description: "Cambio de aceite express",
+            referenceCode: "MO-LUB-001",
+            quantity: 1,
+            unitPrice: 12000,
+            subtotal: 12000,
+            sourceLabel: referenceMap["MO-LUB-001"].sourceLabel,
+            sourceUrl: referenceMap["MO-LUB-001"].sourceUrl,
+          },
+          {
+            referenceCatalogId: referenceMap["MO-FRE-001"].id,
+            itemType: BudgetItemType.LABOR,
+            description: "Cambio de pastillas de freno delanteras",
+            referenceCode: "MO-FRE-001",
+            quantity: 1,
+            unitPrice: 40000,
+            subtotal: 40000,
+            sourceLabel: referenceMap["MO-FRE-001"].sourceLabel,
+            sourceUrl: referenceMap["MO-FRE-001"].sourceUrl,
+          },
+        ],
+      },
+      statusLogs: {
+        create: {
+          previousStatus: null,
+          nextStatus: BudgetStatus.DRAFT,
+          note: "Presupuesto creado para revision interna.",
+          changedById: admin.id,
+        },
+      },
+    },
+  });
+
   await prisma.workOrderEvidence.createMany({
     data: [
       {
@@ -233,6 +403,94 @@ async function main() {
         note: "Registro visual del servicio de mantencion",
       },
     ],
+  });
+
+  const [brakePads, oilFilter, engineOil] = await Promise.all([
+    prisma.repuesto.create({
+      data: {
+        name: "Pastillas de freno delanteras",
+        code: "PF-DEL-001",
+        unitPrice: 42990,
+        currentStock: 8,
+        minimumStock: 4,
+      },
+    }),
+    prisma.repuesto.create({
+      data: {
+        name: "Filtro de aceite",
+        code: "FA-001",
+        unitPrice: 19990,
+        currentStock: 3,
+        minimumStock: 3,
+      },
+    }),
+    prisma.repuesto.create({
+      data: {
+        name: "Aceite sintetico 5W30",
+        code: "ACE-5W30",
+        unitPrice: 35990,
+        currentStock: 12,
+        minimumStock: 6,
+      },
+    }),
+  ]);
+
+  await prisma.stockMovement.createMany({
+    data: [
+      {
+        repuestoId: brakePads.id,
+        type: StockMovementType.INITIAL,
+        quantity: 10,
+        previousStock: 0,
+        newStock: 10,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: brakePads.id,
+        createdById: admin.id,
+      },
+      {
+        repuestoId: brakePads.id,
+        type: StockMovementType.OUT,
+        quantity: -2,
+        previousStock: 10,
+        newStock: 8,
+        reason: `Consumo en orden ${workOrderA.orderNumber}`,
+        sourceType: StockMovementSourceType.WORK_ORDER,
+        sourceId: workOrderA.id,
+        createdById: mechanic.id,
+      },
+      {
+        repuestoId: oilFilter.id,
+        type: StockMovementType.INITIAL,
+        quantity: 3,
+        previousStock: 0,
+        newStock: 3,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: oilFilter.id,
+        createdById: admin.id,
+      },
+      {
+        repuestoId: engineOil.id,
+        type: StockMovementType.INITIAL,
+        quantity: 12,
+        previousStock: 0,
+        newStock: 12,
+        reason: "Stock inicial seed",
+        sourceType: StockMovementSourceType.INVENTORY,
+        sourceId: engineOil.id,
+        createdById: admin.id,
+      },
+    ],
+  });
+
+  await prisma.workOrderPart.create({
+    data: {
+      workOrderId: workOrderA.id,
+      repuestoId: brakePads.id,
+      quantity: 2,
+      createdById: mechanic.id,
+    },
   });
 
   const publicDraftToken = "demo-self-inspection-2026";
@@ -371,7 +629,6 @@ async function main() {
     data: {
       customerId: clientB.id,
       vehicleId: vehicleB.id,
-      workOrderId: workOrderB.id,
       status: SelfInspectionStatus.REVIEWED,
       sourceChannel: SelfInspectionSource.STAFF_ASSISTED,
       inspectionReason: SelfInspectionReason.COLLISION_DAMAGE,
@@ -527,6 +784,7 @@ async function main() {
   console.log(`Mecanico: mecanico@mecaniaos.local / Mechanic1234!`);
   console.log(`Cliente: maria@example.com / Cliente1234!`);
   console.log(`Orden activa de referencia: ${workOrderA.orderNumber}`);
+  console.log(`Referencias de presupuesto: ${budgetReferences.length}`);
   console.log(`Autoinspeccion borrador: ${selfInspectionDraft.id}`);
   console.log(`Enlace seguro demo: /self-inspections/start/${publicDraftToken}`);
   console.log(`Autoinspeccion revisada: ${selfInspectionReviewed.id}`);

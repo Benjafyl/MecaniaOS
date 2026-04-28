@@ -109,6 +109,13 @@ export const workOrderRepository = {
             active: true,
           },
         },
+        budget: {
+          include: {
+            items: {
+              orderBy: [{ itemType: "asc" }, { description: "asc" }],
+            },
+          },
+        },
         assignedTechnician: {
           select: {
             id: true,
@@ -121,6 +128,23 @@ export const workOrderRepository = {
         evidences: {
           include: {
             uploadedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                active: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        parts: {
+          include: {
+            repuesto: true,
+            createdBy: {
               select: {
                 id: true,
                 name: true,

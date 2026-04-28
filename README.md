@@ -1,6 +1,6 @@
 # MecaniaOS
 
-MVP de un sistema de seguimiento de mantenciones mecanicas para talleres.
+Plataforma de gestion operativa para talleres mecanicos.
 
 ## Stack
 
@@ -67,18 +67,44 @@ Documentacion base:
 
 ## Variables de entorno
 
-Crear `.env` o `.env.local` usando `.env.example` como base:
+Crear `.env` o `.env.local` usando [`.env.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.example) como base.
+
+Para Supabase y deploy en servidor ahora se usan estas variables:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5433/mecaniaos?schema=public"
+DATABASE_URL="postgresql://postgres.PROJECT_REF:YOUR_DB_PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+DIRECT_URL="postgresql://postgres.PROJECT_REF:YOUR_DB_PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
 SESSION_SECRET="replace-this-with-a-long-random-secret"
-APP_URL="http://localhost:3000"
+APP_URL="https://your-domain.com"
+SUPABASE_URL="https://PROJECT_REF.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS="self-inspections"
+SUPABASE_STORAGE_BUCKET_WORK_ORDERS="work-orders"
+BOOTSTRAP_ADMIN_NAME="Administrador"
+BOOTSTRAP_ADMIN_EMAIL="admin@your-domain.com"
+BOOTSTRAP_ADMIN_PASSWORD="replace-this-admin-password"
 ```
 
-En este repo ya deje una `.env.local` para desarrollo local con PostgreSQL en Docker.
-El contenedor de MecaniaOS usa el puerto host `5433` para no chocar con otros proyectos.
+Notas:
+
+- `DATABASE_URL` y `DIRECT_URL` usan el `pooler` de Supabase para evitar problemas de conectividad IPv6 en servidores.
+- Los buckets `self-inspections` y `work-orders` deben existir en Supabase Storage.
+- Si defines `BOOTSTRAP_ADMIN_*`, el contenedor crea o reactiva un administrador al arrancar.
 
 ## Ejecucion local
+
+### Si cambias a una rama nueva de Sprint 2
+
+Cada vez que hagas checkout de una rama que cambie Prisma o datos base, corre estos pasos antes de probar:
+
+```bash
+pnpm install
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+```
+
+Esto es especialmente importante en ramas como inventario y presupuestos, porque si no cargas los datos iniciales puedes quedar con catalogos vacios y el flujo se ve roto aunque el codigo este bien.
 
 1. Instalar dependencias:
 
@@ -104,7 +130,7 @@ pnpm db:generate
 pnpm db:push
 ```
 
-5. Cargar datos de prueba:
+5. Cargar datos iniciales:
 
 ```bash
 pnpm db:seed
@@ -135,30 +161,67 @@ Tambien deje preparada una imagen de la app:
 pnpm docker:app:up
 ```
 
-Eso levanta `db` y `app` juntos en contenedores.
+Eso levanta `db` y `app` juntos en contenedores. Si tu `.env` ya apunta a Supabase, la app usa Supabase y el contenedor `db` queda solo como respaldo local.
 
-## Credenciales seed
+## Supabase
 
-- Administrador: `admin@mecaniaos.local` / `Admin1234!`
-- Mecanico: `mecanico@mecaniaos.local` / `Mechanic1234!`
+La fuente de verdad de base de datos para deploy es Supabase.
+
+Migraciones versionadas:
+
+- [supabase/migrations/20260428180241_remote_schema.sql](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/supabase/migrations/20260428180241_remote_schema.sql)
+- [supabase/migrations/20260428194000_budget_inventory_alignment.sql](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/supabase/migrations/20260428194000_budget_inventory_alignment.sql)
+
+Para aplicar cambios del repo al proyecto enlazado:
+
+```bash
+npx supabase db push --linked
+```
+
+## Dockploy
+
+Deje listo [docker-compose.dockploy.yml](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/docker-compose.dockploy.yml) para desplegar `main` en Dockploy.
+
+Flujo recomendado:
+
+1. En Dockploy crear el servicio usando `docker-compose.dockploy.yml`.
+2. Cargar las variables del bloque `.env.example`.
+3. Confirmar que `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y los buckets esten configurados.
+4. Si es el primer deploy, dejar `BOOTSTRAP_ADMIN_*` cargado para crear el acceso inicial.
+5. Desplegar.
+
+Comandos utiles para simular el deploy en local:
+
+```bash
+pnpm docker:prod:up
+pnpm docker:prod:down
+```
+
+## Datos iniciales
+
+`pnpm db:seed` carga catalogos y registros base para desarrollo local.
 
 ## Scripts
 
 - `pnpm dev`
 - `pnpm build`
 - `pnpm start`
+- `pnpm start:prod`
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm db:generate`
 - `pnpm db:push`
 - `pnpm db:migrate`
 - `pnpm db:seed`
+- `pnpm db:bootstrap`
 - `pnpm studio`
 - `pnpm docker:db:up`
 - `pnpm docker:db:down`
 - `pnpm docker:db:logs`
 - `pnpm docker:app:up`
 - `pnpm docker:app:down`
+- `pnpm docker:prod:up`
+- `pnpm docker:prod:down`
 
 ## Endpoints base
 
