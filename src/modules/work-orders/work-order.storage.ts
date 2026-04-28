@@ -14,6 +14,12 @@ const mimeExtensionMap: Record<string, string> = {
   "image/webp": ".webp",
 };
 
+export function isWorkOrderEvidenceStorageConfigured() {
+  return Boolean(
+    env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS,
+  );
+}
+
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
@@ -48,10 +54,14 @@ export async function saveWorkOrderEvidenceFile(input: {
 }) {
   validateWorkOrderEvidenceFile(input.file);
 
-  if (!env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS) {
-    throw new AppError("Falta configurar el bucket de work-orders en el entorno.", 500);
+  if (!isWorkOrderEvidenceStorageConfigured()) {
+    throw new AppError(
+      "La carga de evidencias no esta habilitada todavia en este entorno.",
+      500,
+    );
   }
 
+  const bucket = env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS as string;
   const extension = resolveFileExtension(input.file.name, input.file.type);
   const safeOriginalName = sanitizeFileName(
     path.basename(input.file.name, path.extname(input.file.name)) || "evidence",
@@ -60,7 +70,7 @@ export async function saveWorkOrderEvidenceFile(input: {
   const storageKey = path.posix.join(input.workOrderId, finalFileName);
 
   return uploadPublicStorageObject({
-    bucket: env.SUPABASE_STORAGE_BUCKET_WORK_ORDERS,
+    bucket,
     storageKey,
     file: input.file,
   });

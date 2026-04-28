@@ -1,7 +1,7 @@
 "use client";
 
 import { BudgetItemType } from "@prisma/client";
-import { ChangeEvent, useActionState, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useActionState, useMemo, useState } from "react";
 
 import { createBudgetDraftAction } from "@/app/(protected)/budgets/actions";
 import { Button } from "@/components/ui/button";
@@ -102,15 +102,6 @@ export function BudgetCreateForm({
     ? vehicles.filter((vehicle) => vehicle.clientId === selectedClientId)
     : [];
 
-  useEffect(() => {
-    if (!selectedInspection?.vehicleId) {
-      return;
-    }
-
-    setSelectedClientId(selectedInspection.customerId);
-    setSelectedVehicleId(selectedInspection.vehicleId);
-  }, [selectedInspection]);
-
   function handleClientChange(event: ChangeEvent<HTMLSelectElement>) {
     const nextClientId = event.target.value;
     setSelectedClientId(nextClientId);
@@ -122,6 +113,20 @@ export function BudgetCreateForm({
     if (!nextClientId || !currentVehicleBelongsToNextClient) {
       setSelectedVehicleId("");
     }
+  }
+
+  function handleSelfInspectionChange(event: ChangeEvent<HTMLSelectElement>) {
+    const nextInspectionId = event.target.value;
+    setSelectedSelfInspectionId(nextInspectionId);
+
+    const inspection = selfInspections.find((entry) => entry.id === nextInspectionId);
+
+    if (!inspection) {
+      return;
+    }
+
+    setSelectedClientId(inspection.customerId);
+    setSelectedVehicleId(inspection.vehicleId ?? "");
   }
 
   function findSelectedPart(slot: number) {
@@ -151,7 +156,7 @@ export function BudgetCreateForm({
             <Select
               id="selfInspectionId"
               name="selfInspectionId"
-              onChange={(event) => setSelectedSelfInspectionId(event.target.value)}
+              onChange={handleSelfInspectionChange}
               value={selectedSelfInspectionId}
             >
               <option value="">Sin autoinspeccion asociada</option>

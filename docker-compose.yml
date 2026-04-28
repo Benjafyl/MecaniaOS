@@ -23,15 +23,18 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: mecaniaos-app
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
-      DIRECT_URL: postgresql://postgres:postgres@db:5432/mecaniaos?schema=public
-      SESSION_SECRET: replace-this-with-a-long-random-secret-123
-      APP_URL: http://localhost:${APP_PORT:-3000}
-      SUPABASE_URL: http://localhost:54321
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/mecaniaos?schema=public}
+      DIRECT_URL: ${DIRECT_URL:-postgresql://postgres:postgres@db:5432/mecaniaos?schema=public}
+      SESSION_SECRET: ${SESSION_SECRET:-replace-this-with-a-long-random-secret-1234567890}
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-3000}}
+      SUPABASE_URL: ${SUPABASE_URL:-https://example.supabase.co}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-}
+      SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       NODE_ENV: production
     ports:
       - "${APP_PORT:-3000}:3000"

@@ -11,6 +11,7 @@ import {
   getAssignableMechanics,
   getWorkOrderById,
 } from "@/modules/work-orders/work-order.service";
+import { isWorkOrderEvidenceStorageConfigured } from "@/modules/work-orders/work-order.storage";
 import { AssignmentForm } from "@/app/(protected)/work-orders/assignment-form";
 import { EvidenceUploadForm } from "@/app/(protected)/work-orders/evidence-upload-form";
 import {
@@ -29,6 +30,7 @@ type WorkOrderDetailPageProps = {
 
 export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPageProps) {
   const { id } = await params;
+  const evidenceUploadsEnabled = isWorkOrderEvidenceStorageConfigured();
   const workOrder = await getWorkOrderById(id).catch((error) => {
     if (normalizeError(error).statusCode === 404) {
       notFound();
@@ -264,7 +266,19 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               </p>
             </div>
 
-            <EvidenceUploadForm orderId={workOrder.id} />
+            {evidenceUploadsEnabled ? (
+              <EvidenceUploadForm orderId={workOrder.id} />
+            ) : (
+              <div className="rounded-xl border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] p-4">
+                <p className="text-sm font-semibold text-[#b45309]">
+                  La carga de evidencias no esta habilitada en este entorno.
+                </p>
+                <p className="mt-1 text-sm text-[#b45309]">
+                  La orden sigue funcionando normal, pero falta configurar Supabase Storage
+                  para subir imagenes.
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               {workOrder.evidences.map((evidence) => (
