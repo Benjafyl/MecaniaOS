@@ -21,6 +21,7 @@ import {
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
 import { BUDGET_ITEM_TYPE_LABELS, BUDGET_STATUS_LABELS } from "@/modules/budgets/budget.constants";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type WorkOrderDetailPageProps = {
   params: Promise<{
@@ -63,6 +64,14 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
           </div>
 
           <div className="flex gap-3">
+            <form action={moveToTrashAction}>
+              <input name="entityId" type="hidden" value={workOrder.id} />
+              <input name="entityType" type="hidden" value="workOrder" />
+              <input name="redirectTo" type="hidden" value="/work-orders" />
+              <Button type="submit" variant="danger">
+                Enviar a papelera
+              </Button>
+            </form>
             {workOrder.budget ? (
               <Link href={`/budgets/${workOrder.budget.id}`}>
                 <Button variant="secondary">Ver presupuesto</Button>

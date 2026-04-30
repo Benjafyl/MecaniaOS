@@ -14,6 +14,7 @@ const baseLinks = [
   { href: "/budgets", label: "Presupuestos" },
   { href: "/work-orders", label: "Ordenes" },
   { href: "/inventory", label: "Inventario" },
+  { href: "/trash", label: "Papelera" },
 ];
 
 export function SidebarNav({ role }: { role: UserRole }) {

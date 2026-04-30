@@ -36,50 +36,53 @@ const budgetDetailInclude = {
 export const budgetRepository = {
   list(search?: string) {
     return prisma.budget.findMany({
-      where: search
-        ? {
-            OR: [
-              {
-                budgetNumber: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-              {
-                title: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-              {
-                client: {
-                  fullName: {
+      where: {
+        deletedAt: null,
+        ...(search
+          ? {
+              OR: [
+                {
+                  budgetNumber: {
                     contains: search,
                     mode: "insensitive",
                   },
                 },
-              },
-              {
-                vehicle: {
-                  OR: [
-                    {
-                      plate: {
-                        contains: search,
-                        mode: "insensitive",
-                      },
-                    },
-                    {
-                      vin: {
-                        contains: search,
-                        mode: "insensitive",
-                      },
-                    },
-                  ],
+                {
+                  title: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
                 },
-              },
-            ],
-          }
-        : undefined,
+                {
+                  client: {
+                    fullName: {
+                      contains: search,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+                {
+                  vehicle: {
+                    OR: [
+                      {
+                        plate: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        vin: {
+                          contains: search,
+                          mode: "insensitive",
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
       include: budgetListInclude,
       orderBy: {
         createdAt: "desc",
@@ -87,16 +90,25 @@ export const budgetRepository = {
     });
   },
   findById(id: string) {
-    return prisma.budget.findUnique({
-      where: { id },
+    return prisma.budget.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: budgetDetailInclude,
     });
   },
   listCreateContext() {
     return Promise.all([
       prisma.client.findMany({
+        where: {
+          deletedAt: null,
+        },
         include: {
           vehicles: {
+            where: {
+              deletedAt: null,
+            },
             orderBy: [{ make: "asc" }, { model: "asc" }],
           },
         },
@@ -111,10 +123,14 @@ export const budgetRepository = {
         orderBy: [{ itemType: "asc" }, { name: "asc" }],
       }),
       prisma.repuesto.findMany({
+        where: {
+          deletedAt: null,
+        },
         orderBy: [{ name: "asc" }],
       }),
       prisma.selfInspection.findMany({
         where: {
+          deletedAt: null,
           status: SelfInspectionStatus.REVIEWED,
           vehicleId: {
             not: null,

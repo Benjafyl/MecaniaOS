@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export const workOrderRepository = {
   list(filters?: { search?: string; status?: WorkOrderStatus; actorId?: string; actorRole?: UserRole }) {
     const where: Prisma.WorkOrderWhereInput = {
+      deletedAt: null,
       ...(filters?.actorRole === UserRole.MECHANIC && filters.actorId
         ? {
             assignedTechnicianId: filters.actorId,
@@ -86,8 +87,11 @@ export const workOrderRepository = {
   },
 
   findById(id: string) {
-    return prisma.workOrder.findUnique({
-      where: { id },
+    return prisma.workOrder.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: {
         client: true,
         vehicle: true,
@@ -195,8 +199,11 @@ export const workOrderRepository = {
   },
 
   findByIdForAssignment(id: string) {
-    return prisma.workOrder.findUnique({
-      where: { id },
+    return prisma.workOrder.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       select: {
         id: true,
       },

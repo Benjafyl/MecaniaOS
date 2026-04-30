@@ -216,6 +216,8 @@ model Client {
   phone           String           @db.VarChar(32)
   email           String           @db.VarChar(255)
   address         String?
+  deletedAt       DateTime?
+  purgeAt         DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   user            User?
@@ -226,6 +228,7 @@ model Client {
 
   @@index([fullName])
   @@index([email])
+  @@index([deletedAt, purgeAt])
 }
 
 model Vehicle {
@@ -240,6 +243,8 @@ model Vehicle {
   mileage         Int?
   fuelType        VehicleFuelType?
   transmission    VehicleTransmissionType?
+  deletedAt       DateTime?
+  purgeAt         DateTime?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   client          Client                   @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -249,6 +254,7 @@ model Vehicle {
 
   @@index([clientId])
   @@index([make, model])
+  @@index([deletedAt, purgeAt])
 }
 
 model WorkOrder {
@@ -266,6 +272,8 @@ model WorkOrder {
   createdById          String
   updatedById          String?
   assignedTechnicianId String?
+  deletedAt            DateTime?
+  purgeAt              DateTime?
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   client               Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -283,6 +291,7 @@ model WorkOrder {
   @@index([vehicleId, intakeDate])
   @@index([status])
   @@index([assignedTechnicianId, intakeDate])
+  @@index([deletedAt, purgeAt])
 }
 
 model Repuesto {
@@ -292,6 +301,8 @@ model Repuesto {
   unitPrice    Int             @default(0)
   currentStock Int             @default(0)
   minimumStock Int             @default(0)
+  deletedAt    DateTime?
+  purgeAt      DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   movements    StockMovement[]
@@ -299,6 +310,7 @@ model Repuesto {
 
   @@index([name])
   @@index([currentStock, minimumStock])
+  @@index([deletedAt, purgeAt])
 }
 
 model WorkOrderPart {
@@ -389,6 +401,8 @@ model SelfInspection {
   summaryGenerated      String?
   completionPercent     Int                            @default(0)
   lastCompletedStep     Int                            @default(1)
+  deletedAt             DateTime?
+  purgeAt               DateTime?
   createdAt             DateTime                       @default(now())
   updatedAt             DateTime                       @updatedAt
   customer              Client                         @relation(fields: [customerId], references: [id], onDelete: Restrict)
@@ -407,6 +421,7 @@ model SelfInspection {
   @@index([vehicleId, createdAt])
   @@index([status, overallRiskLevel])
   @@index([submittedAt])
+  @@index([deletedAt, purgeAt])
 }
 
 model SelfInspectionVehicleSnapshot {
@@ -530,6 +545,8 @@ model Budget {
   rejectedAt        DateTime?
   createdById       String
   updatedById       String?
+  deletedAt         DateTime?
+  purgeAt           DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   client            Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -545,6 +562,7 @@ model Budget {
   @@index([vehicleId, createdAt])
   @@index([status, createdAt])
   @@index([selfInspectionId])
+  @@index([deletedAt, purgeAt])
 }
 
 model BudgetItem {

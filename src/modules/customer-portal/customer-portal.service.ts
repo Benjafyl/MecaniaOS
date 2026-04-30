@@ -38,14 +38,21 @@ export async function getCustomerPortalOverview() {
     };
   }
 
-  const customer = await prisma.client.findUnique({
+  const customer = await prisma.client.findFirst({
     where: {
       id: session.user.clientId,
+      deletedAt: null,
     },
     include: {
       vehicles: {
+        where: {
+          deletedAt: null,
+        },
         include: {
           workOrders: {
+            where: {
+              deletedAt: null,
+            },
             include: {
               statusLogs: {
                 orderBy: {
@@ -65,6 +72,7 @@ export async function getCustomerPortalOverview() {
       },
       selfInspections: {
         where: {
+          deletedAt: null,
           vehicleId: null,
           status: {
             in: [...CUSTOMER_PORTAL_PENDING_INSPECTION_STATUSES],
@@ -129,10 +137,14 @@ export async function getCustomerPortalVehicleDetail(vehicleId: string) {
     where: {
       id: vehicleId,
       clientId: session.user.clientId,
+      deletedAt: null,
     },
     include: {
       client: true,
       workOrders: {
+        where: {
+          deletedAt: null,
+        },
         include: {
           evidences: {
             include: {

@@ -129,6 +129,9 @@ const publicWizardInclude = {
   customer: {
     include: {
       vehicles: {
+        where: {
+          deletedAt: null,
+        },
         orderBy: {
           createdAt: "desc" as const,
         },
@@ -153,6 +156,7 @@ const publicWizardInclude = {
 export const selfInspectionRepository = {
   list(filters?: { search?: string; status?: SelfInspectionStatus; risk?: SelfInspectionRiskLevel }) {
     const where: Prisma.SelfInspectionWhereInput = {
+      deletedAt: null,
       ...(filters?.status ? { status: filters.status } : {}),
       ...(filters?.risk ? { overallRiskLevel: filters.risk } : {}),
       ...(filters?.search
@@ -224,8 +228,11 @@ export const selfInspectionRepository = {
   },
 
   findById(id: string) {
-    return prisma.selfInspection.findUnique({
-      where: { id },
+    return prisma.selfInspection.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: selfInspectionDetailInclude,
     });
   },
@@ -234,21 +241,28 @@ export const selfInspectionRepository = {
     return prisma.selfInspection.findFirst({
       where: {
         accessTokenHash,
+        deletedAt: null,
       },
       include: publicWizardInclude,
     });
   },
 
   findPublicById(id: string) {
-    return prisma.selfInspection.findUnique({
-      where: { id },
+    return prisma.selfInspection.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: publicWizardInclude,
     });
   },
 
   findSummaryById(id: string) {
-    return prisma.selfInspection.findUnique({
-      where: { id },
+    return prisma.selfInspection.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: {
         customer: true,
         vehicle: true,

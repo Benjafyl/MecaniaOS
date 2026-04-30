@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/modules/auth/auth.service";
 import { listInventory } from "@/modules/inventory/inventory.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type InventoryPageProps = {
   searchParams: Promise<{
@@ -53,6 +54,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         <div className="mt-5 flex flex-wrap gap-3">
           {isAdmin ? (
             <>
+              <Link href="/trash">
+                <Button variant="secondary">Papelera</Button>
+              </Link>
               <Link href="/inventory/new">
                 <Button>Nuevo repuesto</Button>
               </Link>
@@ -107,6 +111,19 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                 </div>
               </div>
             </div>
+
+            {isAdmin ? (
+              <div className="flex justify-end">
+                <form action={moveToTrashAction}>
+                  <input name="entityId" type="hidden" value={repuesto.id} />
+                  <input name="entityType" type="hidden" value="repuesto" />
+                  <input name="redirectTo" type="hidden" value="/inventory" />
+                  <Button type="submit" variant="danger">
+                    Enviar a papelera
+                  </Button>
+                </form>
+              </div>
+            ) : null}
           </Card>
         ))}
 

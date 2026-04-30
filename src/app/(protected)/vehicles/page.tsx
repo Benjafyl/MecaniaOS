@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { listVehicles } from "@/modules/vehicles/vehicle.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type VehiclesPageProps = {
   searchParams: Promise<{
@@ -34,6 +35,9 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
                 Buscar
               </Button>
             </form>
+            <Link href="/trash">
+              <Button variant="secondary">Papelera</Button>
+            </Link>
             <Link href="/vehicles/new">
               <Button>Nuevo vehiculo</Button>
             </Link>
@@ -61,6 +65,14 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
                 <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
                   {vehicle._count.workOrders} ordenes
                 </div>
+                <form action={moveToTrashAction}>
+                  <input name="entityId" type="hidden" value={vehicle.id} />
+                  <input name="entityType" type="hidden" value="vehicle" />
+                  <input name="redirectTo" type="hidden" value="/vehicles" />
+                  <Button type="submit" variant="danger">
+                    Enviar a papelera
+                  </Button>
+                </form>
                 <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/vehicles/${vehicle.id}`}>
                   Ver ficha
                 </Link>

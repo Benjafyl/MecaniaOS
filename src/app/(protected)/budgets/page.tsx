@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { BudgetStatusBadge } from "@/modules/budgets/budget-status-badge";
 import { listBudgets } from "@/modules/budgets/budget.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type BudgetsPageProps = {
   searchParams: Promise<{
@@ -38,6 +39,9 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
                 Buscar
               </Button>
             </form>
+            <Link href="/trash">
+              <Button variant="secondary">Papelera</Button>
+            </Link>
             <Link href="/budgets/new">
               <Button>Nuevo presupuesto</Button>
             </Link>
@@ -96,7 +100,15 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-3">
+                <form action={moveToTrashAction}>
+                  <input name="entityId" type="hidden" value={budget.id} />
+                  <input name="entityType" type="hidden" value="budget" />
+                  <input name="redirectTo" type="hidden" value="/budgets" />
+                  <Button type="submit" variant="danger">
+                    Enviar a papelera
+                  </Button>
+                </form>
                 <Link
                   className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
                   href={`/budgets/${budget.id}`}

@@ -4,38 +4,49 @@ import { prisma } from "@/lib/prisma";
 
 export const clientRepository = {
   list(search?: string) {
-    const where: Prisma.ClientWhereInput | undefined = search
-      ? {
-          OR: [
-            {
-              fullName: {
-                contains: search,
-                mode: "insensitive",
+    const where: Prisma.ClientWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              {
+                fullName: {
+                  contains: search,
+                  mode: "insensitive",
+                },
               },
-            },
-            {
-              email: {
-                contains: search,
-                mode: "insensitive",
+              {
+                email: {
+                  contains: search,
+                  mode: "insensitive",
+                },
               },
-            },
-            {
-              phone: {
-                contains: search,
-                mode: "insensitive",
+              {
+                phone: {
+                  contains: search,
+                  mode: "insensitive",
+                },
               },
-            },
-          ],
-        }
-      : undefined;
+            ],
+          }
+        : {}),
+    };
 
     return prisma.client.findMany({
       where,
       include: {
         _count: {
           select: {
-            vehicles: true,
-            workOrders: true,
+            vehicles: {
+              where: {
+                deletedAt: null,
+              },
+            },
+            workOrders: {
+              where: {
+                deletedAt: null,
+              },
+            },
           },
         },
       },
@@ -46,15 +57,24 @@ export const clientRepository = {
   },
 
   findById(id: string) {
-    return prisma.client.findUnique({
-      where: { id },
+    return prisma.client.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: {
         vehicles: {
+          where: {
+            deletedAt: null,
+          },
           orderBy: {
             createdAt: "desc",
           },
         },
         workOrders: {
+          where: {
+            deletedAt: null,
+          },
           include: {
             vehicle: true,
           },
@@ -69,6 +89,7 @@ export const clientRepository = {
   findByEmail(email: string) {
     return prisma.client.findFirst({
       where: {
+        deletedAt: null,
         email: {
           equals: email,
           mode: "insensitive",

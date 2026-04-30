@@ -54,3 +54,20 @@ export function parseDateInput(value?: string) {
 
   return new Date(`${value}T12:00:00.000Z`);
 }
+
+export function addDays(date: Date, days: number) {
+  const value = new Date(date);
+  value.setDate(value.getDate() + days);
+  return value;
+}
+
+export function getDaysUntil(value?: Date | string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  const diff = date.getTime() - Date.now();
+
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}

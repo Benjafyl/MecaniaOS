@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { listClients } from "@/modules/clients/client.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type ClientsPageProps = {
   searchParams: Promise<{
@@ -34,6 +35,9 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 Buscar
               </Button>
             </form>
+            <Link href="/trash">
+              <Button variant="secondary">Papelera</Button>
+            </Link>
             <Link href="/clients/new">
               <Button>Nuevo cliente</Button>
             </Link>
@@ -62,6 +66,14 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
                 <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
                   {client._count.workOrders} ordenes
                 </div>
+                <form action={moveToTrashAction}>
+                  <input name="entityId" type="hidden" value={client.id} />
+                  <input name="entityType" type="hidden" value="client" />
+                  <input name="redirectTo" type="hidden" value="/clients" />
+                  <Button type="submit" variant="danger">
+                    Enviar a papelera
+                  </Button>
+                </form>
                 <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/clients/${client.id}`}>
                   Ver detalle
                 </Link>

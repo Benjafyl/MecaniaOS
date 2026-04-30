@@ -15,8 +15,11 @@ import { saveWorkOrderEvidenceFile } from "@/modules/work-orders/work-order.stor
 import { listMechanics } from "@/modules/users/user.service";
 
 async function assertClientVehicleMatch(clientId: string, vehicleId: string) {
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id: vehicleId },
+  const vehicle = await prisma.vehicle.findFirst({
+    where: {
+      id: vehicleId,
+      deletedAt: null,
+    },
     select: {
       id: true,
       clientId: true,
@@ -151,8 +154,11 @@ export async function getAssignableMechanics() {
 
 export async function updateWorkOrder(id: string, input: unknown, actorId: string) {
   const data = updateWorkOrderSchema.parse(input);
-  const existing = await prisma.workOrder.findUnique({
-    where: { id },
+  const existing = await prisma.workOrder.findFirst({
+    where: {
+      id,
+      deletedAt: null,
+    },
     select: {
       id: true,
       status: true,
@@ -198,8 +204,11 @@ export async function updateWorkOrder(id: string, input: unknown, actorId: strin
 
 export async function updateWorkOrderStatus(id: string, input: unknown, actorId: string) {
   const data = updateWorkOrderStatusSchema.parse(input);
-  const existing = await prisma.workOrder.findUnique({
-    where: { id },
+  const existing = await prisma.workOrder.findFirst({
+    where: {
+      id,
+      deletedAt: null,
+    },
     select: {
       id: true,
       status: true,

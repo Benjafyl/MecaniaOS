@@ -13,6 +13,7 @@ import {
 } from "@/modules/work-orders/work-order.constants";
 import { getCurrentSession } from "@/modules/auth/auth.service";
 import { listWorkOrders } from "@/modules/work-orders/work-order.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type WorkOrdersPageProps = {
   searchParams: Promise<{
@@ -57,6 +58,9 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 Filtrar
               </Button>
             </form>
+            <Link href="/trash">
+              <Button variant="secondary">Papelera</Button>
+            </Link>
             <Link href="/work-orders/new">
               <Button>Nueva orden</Button>
             </Link>
@@ -89,6 +93,14 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 <p className="text-sm text-[color:var(--muted)]">
                   Estado {WORK_ORDER_STATUS_LABELS[order.status]}
                 </p>
+                <form action={moveToTrashAction}>
+                  <input name="entityId" type="hidden" value={order.id} />
+                  <input name="entityType" type="hidden" value="workOrder" />
+                  <input name="redirectTo" type="hidden" value="/work-orders" />
+                  <Button type="submit" variant="danger">
+                    Enviar a papelera
+                  </Button>
+                </form>
                 <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/work-orders/${order.id}`}>
                   Abrir orden
                 </Link>

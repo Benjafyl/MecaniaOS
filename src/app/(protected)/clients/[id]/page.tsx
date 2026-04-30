@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate } from "@/lib/utils";
 import { getClientById } from "@/modules/clients/client.service";
+import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type ClientDetailPageProps = {
   params: Promise<{
@@ -41,9 +42,19 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
             </p>
           </div>
 
-          <Link href={`/vehicles/new?clientId=${client.id}`}>
-            <Button>Agregar vehiculo</Button>
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <form action={moveToTrashAction}>
+              <input name="entityId" type="hidden" value={client.id} />
+              <input name="entityType" type="hidden" value="client" />
+              <input name="redirectTo" type="hidden" value="/clients" />
+              <Button type="submit" variant="danger">
+                Enviar a papelera
+              </Button>
+            </form>
+            <Link href={`/vehicles/new?clientId=${client.id}`}>
+              <Button>Agregar vehiculo</Button>
+            </Link>
+          </div>
         </div>
       </Card>
 
