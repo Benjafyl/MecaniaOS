@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createHash, randomBytes } from "node:crypto";
 
 import { env } from "@/lib/env";
@@ -19,6 +19,17 @@ function hashSessionToken(token: string) {
 
 function createSessionToken() {
   return randomBytes(32).toString("hex");
+}
+
+async function shouldUseSecureCookies() {
+  const headerStore = await headers();
+  const forwardedProto = headerStore.get("x-forwarded-proto");
+
+  if (forwardedProto) {
+    return forwardedProto.split(",")[0]?.trim() === "https";
+  }
+
+  return new URL(env.APP_URL).protocol === "https:";
 }
 
 export async function signIn(input: unknown) {
@@ -42,12 +53,14 @@ export async function signIn(input: unknown) {
   await authRepository.createSession(user.id, tokenHash, expiresAt);
 
   const cookieStore = await cookies();
+  const secure = await shouldUseSecureCookies();
+
   cookieStore.set(SESSION_COOKIE_NAME, rawToken, {
     expires: expiresAt,
     httpOnly: true,
     path: "/",
     sameSite: "lax",
-    secure: env.NODE_ENV === "production",
+    secure,
   });
 
   return {
@@ -101,10 +114,17 @@ export async function requireCustomerUser() {
 export async function signOut() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const secure = await shouldUseSecureCookies();
 
   if (token) {
     await authRepository.deleteSessionByTokenHash(hashSessionToken(token));
   }
 
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.set(SESSION_COOKIE_NAME, "", {
+    expires: new Date(0),
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secure,
+  });
 }
