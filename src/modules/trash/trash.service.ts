@@ -371,6 +371,23 @@ export async function trashClient(id: string) {
     });
 
     await Promise.all([
+      tx.user.updateMany({
+        where: {
+          clientId: id,
+          role: "CUSTOMER",
+        },
+        data: {
+          active: false,
+        },
+      }),
+      tx.session.deleteMany({
+        where: {
+          user: {
+            clientId: id,
+            role: "CUSTOMER",
+          },
+        },
+      }),
       tx.vehicle.updateMany({
         where: {
           clientId: id,
@@ -425,6 +442,15 @@ export async function restoreClient(id: string) {
     });
 
     await Promise.all([
+      tx.user.updateMany({
+        where: {
+          clientId: id,
+          role: "CUSTOMER",
+        },
+        data: {
+          active: true,
+        },
+      }),
       tx.vehicle.updateMany({
         where: { clientId: id },
         data: TRASH_CLEAR_STATE,

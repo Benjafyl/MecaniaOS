@@ -297,6 +297,7 @@ export async function updateBudgetDraftAction(
 
     revalidatePath("/budgets");
     revalidatePath(`/budgets/${budgetId}`);
+    revalidatePath("/portal");
     return {};
   } catch (error) {
     if (isRedirectError(error)) {
@@ -328,6 +329,7 @@ export async function transitionBudgetStatusAction(
 
     revalidatePath("/budgets");
     revalidatePath(`/budgets/${budgetId}`);
+    revalidatePath("/portal");
     return {};
   } catch (error) {
     if (isRedirectError(error)) {
@@ -355,6 +357,8 @@ export async function createWorkOrderFromBudgetAction(
     revalidatePath(`/budgets/${budgetId}`);
     revalidatePath("/work-orders");
     revalidatePath(`/work-orders/${workOrder.id}`);
+    revalidatePath("/portal");
+    revalidatePath(`/portal/budgets/${budgetId}`);
     redirect(`/work-orders/${workOrder.id}`);
   } catch (error) {
     if (isRedirectError(error)) {

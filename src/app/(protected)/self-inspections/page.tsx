@@ -72,57 +72,127 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
         </div>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card className="rounded-[32px]">
-          <h2 className="font-heading text-2xl font-semibold">Generar enlace seguro</h2>
-          <p className="mt-2 text-sm text-[color:var(--muted)]">
-            Crea una autoinspeccion en borrador y comparte un link listo para usar. El cliente se
-            identificara al abrirlo.
-          </p>
+      <Card className="overflow-hidden rounded-[32px] border border-[rgba(13,71,84,0.18)] bg-[linear-gradient(135deg,rgba(12,58,72,0.98)_0%,rgba(23,101,114,0.92)_100%)] text-white shadow-[0_24px_60px_rgba(8,47,73,0.18)]">
+        <div className="flex min-h-[260px] flex-col justify-between gap-8 px-6 py-7 lg:px-8 lg:py-8">
+          <div className="max-w-3xl">
+            <p className="text-xs uppercase tracking-[0.22em] text-white/64">
+              Acceso guiado
+            </p>
+            <h2 className="mt-3 font-heading text-3xl font-semibold">Generar enlace seguro</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-white/90">
+              Crea una autoinspeccion nueva y comparte un acceso limpio para que el cliente cargue
+              sintomas, datos del vehiculo y evidencia antes de ingresar al taller.
+            </p>
+          </div>
 
-          <div className="mt-5">
+          <div className="flex justify-start lg:justify-end">
             <InviteForm />
+          </div>
+        </div>
+      </Card>
+
+      <section className="space-y-4">
+        <Card className="rounded-[30px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(243,247,252,0.94)_100%)] px-6 py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+                Bandeja activa
+              </p>
+              <h2 className="mt-2 font-heading text-3xl font-semibold">Autoinspecciones recibidas</h2>
+              <p className="mt-2 max-w-3xl text-sm text-[color:var(--muted-strong)]">
+                Casos en curso para revisar, derivar o convertir en orden de trabajo segun el
+                avance y el riesgo detectado.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 px-5 py-4 text-right">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                Casos visibles
+              </p>
+              <p className="mt-2 font-heading text-3xl font-semibold text-[color:var(--foreground)]">
+                {inspections.length}
+              </p>
+            </div>
           </div>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {inspections.map((inspection) => (
-            <Card className="rounded-[28px]" key={inspection.id}>
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="font-heading text-2xl font-semibold">
-                      {inspection.vehicleSnapshot?.make ?? inspection.vehicle?.make ?? "Vehiculo"}{" "}
-                      {inspection.vehicleSnapshot?.model ?? inspection.vehicle?.model ?? ""}
-                    </h2>
+            <Card
+              className="rounded-[22px] border border-[rgba(37,99,235,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,250,255,0.98)_100%)] shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
+              key={inspection.id}
+            >
+              <div className="flex flex-col gap-3 p-3.5 lg:grid lg:grid-cols-[1.7fr_0.7fr] lg:items-start lg:gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-[rgba(37,99,235,0.16)] bg-[rgba(37,99,235,0.08)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
+                      Recepcion
+                    </span>
                     <SelfInspectionStatusBadge status={inspection.status} />
                     <SelfInspectionRiskBadge level={inspection.overallRiskLevel} />
                   </div>
-                  <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                    {inspection.customer.fullName} /{" "}
-                    {inspection.vehicleSnapshot?.plate ?? inspection.vehicle?.plate ?? "Sin patente"}
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">
+
+                  <h3 className="mt-2.5 font-heading text-lg font-semibold text-[color:var(--foreground)] lg:text-[1.45rem]">
+                    {inspection.vehicleSnapshot?.make ?? inspection.vehicle?.make ?? "Vehiculo"}{" "}
+                    {inspection.vehicleSnapshot?.model ?? inspection.vehicle?.model ?? ""}
+                  </h3>
+
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-[color:var(--muted-strong)] lg:text-sm">
+                    <span>{inspection.customer.fullName}</span>
+                    <span className="text-[color:var(--border-strong)]">/</span>
+                    <span>
+                      {inspection.vehicleSnapshot?.plate ?? inspection.vehicle?.plate ?? "Sin patente"}
+                    </span>
+                    <span className="text-[color:var(--border-strong)]">/</span>
+                    <span>Inicio {formatDate(inspection.startedAt)}</span>
+                  </div>
+
+                  <p className="mt-2.5 max-w-3xl text-[13px] leading-5 text-[color:var(--muted)] lg:text-sm">
                     {inspection.mainComplaint ?? "Sin motivo principal definido"}
                   </p>
-                  <p className="mt-2 text-xs text-[color:var(--muted)]">
-                    Inicio {formatDate(inspection.startedAt)} / {inspection._count.photos} fotos /{" "}
-                    {inspection._count.answers} respuestas
-                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="rounded-xl border border-[color:var(--border)] bg-white/85 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                        Fotos
+                      </p>
+                      <p className="mt-0.5 font-heading text-base font-semibold">
+                        {inspection._count.photos}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--border)] bg-white/85 px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                        Respuestas
+                      </p>
+                      <p className="mt-0.5 font-heading text-base font-semibold">
+                        {inspection._count.answers}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-start gap-3 md:items-end">
+                <div className="flex w-full flex-col gap-2.5 rounded-[18px] border border-[rgba(37,99,235,0.12)] bg-white/88 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                    Seguimiento
+                  </p>
                   {inspection.criticalFindings.length > 0 ? (
-                    <p className="max-w-sm text-right text-xs text-[color:var(--accent-strong)]">
-                      Alertas:{" "}
-                      {inspection.criticalFindings
-                        .slice(0, 3)
-                        .map((finding) => finding.label)
-                        .join(", ")}
-                    </p>
-                  ) : null}
+                    <div className="rounded-xl border border-[rgba(180,83,9,0.18)] bg-[rgba(245,158,11,0.08)] px-3 py-2.5 text-[11px] leading-5 text-[#9a3412]">
+                      <span className="font-semibold uppercase tracking-[0.14em]">Alertas</span>
+                      <p className="mt-1">
+                        {inspection.criticalFindings
+                          .slice(0, 3)
+                          .map((finding) => finding.label)
+                          .join(", ")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-[rgba(22,163,74,0.16)] bg-[rgba(22,163,74,0.08)] px-3 py-2.5 text-[11px] leading-5 text-[#166534]">
+                      Sin alertas criticas destacadas en este caso.
+                    </div>
+                  )}
+
                   <Link href={`/self-inspections/${inspection.id}`}>
-                    <Button>Abrir inspeccion</Button>
+                    <Button className="h-11 w-full">Abrir inspeccion</Button>
                   </Link>
                 </div>
               </div>
@@ -137,7 +207,7 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
             </Card>
           ) : null}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

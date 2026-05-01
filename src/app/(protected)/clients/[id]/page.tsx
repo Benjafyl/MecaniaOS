@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MoveToTrashButton } from "@/components/trash/trash-ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate } from "@/lib/utils";
 import { getClientById } from "@/modules/clients/client.service";
-import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type ClientDetailPageProps = {
   params: Promise<{
@@ -42,18 +42,13 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <form action={moveToTrashAction}>
-              <input name="entityId" type="hidden" value={client.id} />
-              <input name="entityType" type="hidden" value="client" />
-              <input name="redirectTo" type="hidden" value="/clients" />
-              <Button type="submit" variant="danger">
-                Enviar a papelera
-              </Button>
-            </form>
-            <Link href={`/vehicles/new?clientId=${client.id}`}>
-              <Button>Agregar vehiculo</Button>
-            </Link>
+          <div className="flex items-start gap-5 lg:items-center">
+            <MoveToTrashButton entityId={client.id} entityType="client" redirectTo="/clients/trash" />
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/vehicles/new?clientId=${client.id}`}>
+                <Button>Agregar vehiculo</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </Card>

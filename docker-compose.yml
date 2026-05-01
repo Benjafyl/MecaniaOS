@@ -17,6 +17,45 @@ services:
       timeout: 5s
       retries: 20
 
+  app-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: mecaniaos-app-dev
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PNPM_HOME: /pnpm
+      PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/mecaniaos?schema=public}
+      DIRECT_URL: ${DIRECT_URL:-postgresql://postgres:postgres@db:5432/mecaniaos?schema=public}
+      SESSION_SECRET: ${SESSION_SECRET:-replace-this-with-a-long-random-secret-1234567890}
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-3000}}
+      SUPABASE_URL: ${SUPABASE_URL:-https://example.supabase.co}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-local-dev-service-role-key}
+      SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS: ${SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS:-self-inspections-dev}
+      SUPABASE_STORAGE_BUCKET_WORK_ORDERS: ${SUPABASE_STORAGE_BUCKET_WORK_ORDERS:-work-orders-dev}
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - .:/app
+      - mecaniaos_node_modules:/app/node_modules
+      - mecaniaos_next_cache:/app/.next
+    command: >
+      sh -lc "
+      pnpm prisma generate &&
+      pnpm db:push &&
+      pnpm dev --hostname 0.0.0.0 --port 3000
+      "
+    restart: unless-stopped
+
   app:
     profiles: ["app"]
     build:
@@ -42,3 +81,5 @@ services:
 
 volumes:
   mecaniaos_postgres_data:
+  mecaniaos_node_modules:
+  mecaniaos_next_cache:

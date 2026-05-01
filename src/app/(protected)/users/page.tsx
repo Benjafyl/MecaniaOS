@@ -30,7 +30,7 @@ export default async function UsersPage() {
         </div>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="space-y-5">
         <Card className="rounded-2xl">
           <h2 className="font-heading text-2xl font-semibold">Nuevo usuario</h2>
           <div className="mt-5">
@@ -38,13 +38,13 @@ export default async function UsersPage() {
           </div>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {users.map((user) => (
-            <Card className="rounded-2xl" key={user.id}>
-              <div className="flex flex-col gap-3">
+            <Card className="rounded-xl px-5 py-4" key={user.id}>
+              <div className="flex flex-col gap-2.5">
                 <div>
-                  <h2 className="font-heading text-2xl font-semibold">{user.name}</h2>
-                  <p className="mt-2 text-sm text-[color:var(--muted-strong)]">{user.email}</p>
+                  <h2 className="font-heading text-xl font-semibold">{user.name}</h2>
+                  <p className="mt-1.5 text-sm text-[color:var(--muted-strong)]">{user.email}</p>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">
                     {getInternalRoleLabel(user.role)} / {user.active ? "Activo" : "Inactivo"}
                   </p>

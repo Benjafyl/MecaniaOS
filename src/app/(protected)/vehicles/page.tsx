@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MoveToTrashButton, SectionTrashLink } from "@/components/trash/trash-ui";
 import { formatDate } from "@/lib/utils";
 import { listVehicles } from "@/modules/vehicles/vehicle.service";
-import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type VehiclesPageProps = {
   searchParams: Promise<{
@@ -20,7 +20,7 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
   return (
     <div className="space-y-6">
       <Card className="rounded-2xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
               Registro vehicular
@@ -28,19 +28,20 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
             <h1 className="mt-2 font-heading text-3xl font-semibold">Vehiculos del taller</h1>
           </div>
 
-          <div className="flex flex-col gap-3 md:flex-row">
-            <form className="flex gap-3" method="get">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <form className="flex flex-col gap-3 md:flex-row lg:min-w-[520px]" method="get">
               <Input defaultValue={q} name="q" placeholder="Buscar por VIN, patente o cliente" />
               <Button type="submit" variant="secondary">
                 Buscar
               </Button>
             </form>
-            <Link href="/trash">
-              <Button variant="secondary">Papelera</Button>
-            </Link>
-            <Link href="/vehicles/new">
-              <Button>Nuevo vehiculo</Button>
-            </Link>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/vehicles/new">
+                <Button>Nuevo vehiculo</Button>
+              </Link>
+              <SectionTrashLink href="/vehicles/trash" />
+            </div>
           </div>
         </div>
       </Card>
@@ -61,21 +62,19 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
-                  {vehicle._count.workOrders} ordenes
+              <div className="flex items-start gap-5 lg:items-center">
+                <MoveToTrashButton entityId={vehicle.id} entityType="vehicle" redirectTo="/vehicles" />
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="rounded-md bg-[color:var(--surface-strong)] px-4 py-2 text-sm">
+                    {vehicle._count.workOrders} ordenes
+                  </div>
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/vehicles/${vehicle.id}`}
+                  >
+                    Ver ficha
+                  </Link>
                 </div>
-                <form action={moveToTrashAction}>
-                  <input name="entityId" type="hidden" value={vehicle.id} />
-                  <input name="entityType" type="hidden" value="vehicle" />
-                  <input name="redirectTo" type="hidden" value="/vehicles" />
-                  <Button type="submit" variant="danger">
-                    Enviar a papelera
-                  </Button>
-                </form>
-                <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/vehicles/${vehicle.id}`}>
-                  Ver ficha
-                </Link>
               </div>
             </div>
           </Card>

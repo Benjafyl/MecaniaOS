@@ -21,7 +21,7 @@ import {
 import { hash } from "bcryptjs";
 import { createHash } from "node:crypto";
 
-  const prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
 function hashAccessToken(token: string) {
   return createHash("sha256").update(token).digest("hex");

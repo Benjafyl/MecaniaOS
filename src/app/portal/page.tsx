@@ -3,7 +3,8 @@ import Link from "next/link";
 import { WorkOrderProgress } from "@/components/customer-portal/work-order-progress";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { BudgetStatusBadge } from "@/modules/budgets/budget-status-badge";
 import { getCustomerPortalOverview } from "@/modules/customer-portal/customer-portal.service";
 import {
   SELF_INSPECTION_RISK_LABELS,
@@ -43,6 +44,44 @@ export default async function CustomerPortalPage() {
           avance de cada caso.
         </p>
 
+        {portal.budgets.length > 0 ? (
+          <div className="mt-6 rounded-2xl border border-[rgba(37,99,235,0.16)] bg-[linear-gradient(135deg,rgba(37,99,235,0.10)_0%,rgba(14,34,63,0.08)_100%)] p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#1d4ed8]">
+                  Presupuestos del cliente
+                </p>
+                <h2 className="font-heading text-2xl font-semibold">
+                  {portal.stats.pendingBudgets > 0
+                    ? `Tienes ${portal.stats.pendingBudgets} presupuesto${
+                        portal.stats.pendingBudgets === 1 ? "" : "s"
+                      } pendiente${portal.stats.pendingBudgets === 1 ? "" : "s"}`
+                    : "Ya puedes revisar tus presupuestos enviados"}
+                </h2>
+                <p className="text-sm text-[color:var(--muted-strong)]">
+                  Entra directo al detalle para revisar repuestos, mano de obra y responder desde
+                  tu cuenta.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  className="rounded-full border border-[rgba(37,99,235,0.16)] bg-white px-4 py-2 text-sm font-semibold text-[#1d4ed8] transition-colors hover:bg-[rgba(37,99,235,0.08)]"
+                  href="/portal#presupuestos"
+                >
+                  Ver todos
+                </Link>
+                <Link
+                  className="rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1d4ed8]"
+                  href={`/portal/budgets/${portal.budgets[0].id}`}
+                >
+                  Abrir presupuesto
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
@@ -70,8 +109,93 @@ export default async function CustomerPortalPage() {
             </p>
             <p className="mt-2 font-heading text-3xl font-semibold">{portal.stats.readyForDelivery}</p>
           </div>
+          <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4 md:col-span-2 lg:col-span-1">
+            <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Presupuestos pendientes
+            </p>
+            <p className="mt-2 font-heading text-3xl font-semibold">{portal.stats.pendingBudgets}</p>
+          </div>
         </div>
       </Card>
+
+      {portal.budgets.length > 0 ? (
+        <section className="space-y-4" id="presupuestos">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Presupuestos del taller
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold">
+              Revision y respuesta del cliente
+            </h2>
+            <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+              Cuando el taller te envia un presupuesto, aqui puedes revisar el detalle completo y responder desde tu propia cuenta.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {portal.budgets.map((budget) => (
+              <Card className="rounded-2xl" key={budget.id}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                      {budget.budgetNumber}
+                    </p>
+                    <h2 className="mt-2 font-heading text-2xl font-semibold">{budget.title}</h2>
+                    <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                      {budget.vehicle.make} {budget.vehicle.model} / {budget.vehicle.plate ?? budget.vehicle.vin}
+                    </p>
+                  </div>
+                  <BudgetStatusBadge status={budget.status} />
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                      Total
+                    </p>
+                    <p className="mt-2 font-heading text-xl font-semibold">
+                      {formatCurrency(budget.totalAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                      Items
+                    </p>
+                    <p className="mt-2 font-heading text-xl font-semibold">{budget.items.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                      Enviado
+                    </p>
+                    <p className="mt-2 font-heading text-base font-semibold">
+                      {formatDate(budget.sentAt ?? budget.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm text-[color:var(--muted)]">
+                  {budget.status === "SENT"
+                    ? "Tienes una respuesta pendiente para este presupuesto."
+                    : budget.status === "APPROVED"
+                      ? "Ya aprobaste este presupuesto y el taller puede continuar el flujo."
+                      : budget.status === "REJECTED"
+                        ? "Este presupuesto fue rechazado desde tu portal."
+                        : "Este presupuesto ya se convirtio en una orden de trabajo."}
+                </p>
+
+                <div className="mt-6 flex justify-end">
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/portal/budgets/${budget.id}`}
+                  >
+                    Ver presupuesto detallado
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {portal.vehicles.length > 0 ? (
         <section className="space-y-4">
@@ -229,7 +353,9 @@ export default async function CustomerPortalPage() {
         </section>
       ) : null}
 
-      {portal.vehicles.length === 0 && portal.pendingInspections.length === 0 ? (
+      {portal.vehicles.length === 0 &&
+      portal.pendingInspections.length === 0 &&
+      portal.budgets.length === 0 ? (
         <Card className="rounded-2xl text-center">
           <p className="text-[color:var(--muted-strong)]">
             Aun no tienes vehiculos ni ingresos asociados en el portal.

@@ -27,15 +27,28 @@ import {
 
 const COMMON_REVALIDATE_PATHS = [
   "/dashboard",
-  "/trash",
   "/clients",
+  "/clients/trash",
   "/vehicles",
+  "/vehicles/trash",
   "/work-orders",
+  "/work-orders/trash",
   "/budgets",
+  "/budgets/trash",
   "/inventory",
+  "/inventory/trash",
   "/self-inspections",
   "/portal",
 ] as const;
+
+const TRASH_REDIRECTS_BY_ENTITY_TYPE: Record<TrashEntityType, string> = {
+  budget: "/budgets/trash",
+  client: "/clients/trash",
+  repuesto: "/inventory/trash",
+  selfInspection: "/self-inspections",
+  vehicle: "/vehicles/trash",
+  workOrder: "/work-orders/trash",
+};
 
 function revalidateTrashRelatedPaths() {
   for (const path of COMMON_REVALIDATE_PATHS) {
@@ -97,7 +110,7 @@ export async function moveToTrashAction(
   }
 
   revalidateTrashRelatedPaths();
-  redirect(getRedirectTarget(formData, "/trash"));
+  redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }
 
 export async function restoreTrashItemAction(
@@ -132,7 +145,7 @@ export async function restoreTrashItemAction(
   }
 
   revalidateTrashRelatedPaths();
-  redirect(getRedirectTarget(formData, "/trash"));
+  redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }
 
 export async function deleteTrashItemForeverAction(
@@ -164,5 +177,5 @@ export async function deleteTrashItemForeverAction(
   }
 
   revalidateTrashRelatedPaths();
-  redirect(getRedirectTarget(formData, "/trash"));
+  redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }

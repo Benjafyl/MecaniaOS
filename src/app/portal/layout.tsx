@@ -40,12 +40,18 @@ export default async function CustomerPortalLayout({
           </div>
 
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <Link
-                className="font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                className="rounded-full border border-[rgba(37,99,235,0.16)] bg-[rgba(37,99,235,0.08)] px-3 py-2 font-semibold text-[#1d4ed8] transition-colors hover:bg-[rgba(37,99,235,0.14)]"
                 href="/portal"
               >
                 Mis vehiculos
+              </Link>
+              <Link
+                className="rounded-full border border-[rgba(37,99,235,0.16)] bg-[rgba(37,99,235,0.08)] px-3 py-2 font-semibold text-[#1d4ed8] transition-colors hover:bg-[rgba(37,99,235,0.14)]"
+                href="/portal#presupuestos"
+              >
+                Mis presupuestos
               </Link>
             </div>
             <div className="flex flex-wrap items-center gap-3">

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MoveToTrashButton } from "@/components/trash/trash-ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -21,7 +22,6 @@ import {
 import { StatusForm } from "@/app/(protected)/work-orders/status-form";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
 import { BUDGET_ITEM_TYPE_LABELS, BUDGET_STATUS_LABELS } from "@/modules/budgets/budget.constants";
-import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type WorkOrderDetailPageProps = {
   params: Promise<{
@@ -63,26 +63,25 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
             <p className="mt-1 text-sm text-[color:var(--muted)]">{workOrder.reason}</p>
           </div>
 
-          <div className="flex gap-3">
-            <form action={moveToTrashAction}>
-              <input name="entityId" type="hidden" value={workOrder.id} />
-              <input name="entityType" type="hidden" value="workOrder" />
-              <input name="redirectTo" type="hidden" value="/work-orders" />
-              <Button type="submit" variant="danger">
-                Enviar a papelera
-              </Button>
-            </form>
-            {workOrder.budget ? (
-              <Link href={`/budgets/${workOrder.budget.id}`}>
-                <Button variant="secondary">Ver presupuesto</Button>
+          <div className="flex items-start gap-5 lg:items-center">
+            <MoveToTrashButton
+              entityId={workOrder.id}
+              entityType="workOrder"
+              redirectTo="/work-orders/trash"
+            />
+            <div className="flex flex-wrap gap-3">
+              {workOrder.budget ? (
+                <Link href={`/budgets/${workOrder.budget.id}`}>
+                  <Button variant="secondary">Ver presupuesto</Button>
+                </Link>
+              ) : null}
+              <Link href={`/vehicles/${workOrder.vehicleId}`}>
+                <Button variant="secondary">Ver vehiculo</Button>
               </Link>
-            ) : null}
-            <Link href={`/vehicles/${workOrder.vehicleId}`}>
-              <Button variant="secondary">Ver vehiculo</Button>
-            </Link>
-            <Link href="/work-orders/new">
-              <Button>Nueva orden</Button>
-            </Link>
+              <Link href="/work-orders/new">
+                <Button>Nueva orden</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </Card>

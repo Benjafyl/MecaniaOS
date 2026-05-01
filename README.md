@@ -144,24 +144,51 @@ pnpm dev
 
 ## Flujo con Docker
 
-Uso recomendado para desarrollo de equipo:
+Para desarrollo local rapido ahora hay dos modos separados:
 
-- App local con `pnpm dev`
-- Base de datos en Docker con `pnpm docker:db:up`
+### Modo recomendado para desarrollar y ver cambios rapido
 
-Comandos utiles:
+Este modo levanta la app en Docker con hot reload, sin rebuild por cada cambio y sin tocar la configuracion de Dockploy:
 
-- `pnpm docker:db:up`
-- `pnpm docker:db:down`
-- `pnpm docker:db:logs`
+```bash
+pnpm docker:dev:up
+```
 
-Tambien deje preparada una imagen de la app:
+Luego abre:
+
+```text
+http://localhost:3000/login
+```
+
+Comandos utiles de este modo:
+
+- `pnpm docker:dev:up`
+- `pnpm docker:dev:down`
+- `pnpm docker:dev:logs`
+- `pnpm docker:dev:db:push`
+- `pnpm docker:dev:seed`
+- `pnpm docker:dev:reset`
+
+Notas:
+
+- Los cambios en `src/` se reflejan sin reconstruir la imagen.
+- `pnpm docker:dev:up` reconstruye solo la imagen liviana de dependencias cuando hace falta; los cambios normales de codigo se ven por hot reload.
+- `pnpm db:push` corre al arrancar el contenedor para evitar desajustes de schema en local.
+- Si cambias dependencias o Prisma y algo queda raro, usa `pnpm docker:dev:reset` y luego `pnpm docker:dev:up`.
+
+### Modo de imagen de produccion local
+
+Esto deja la app local parecida al deploy, util para validar una build cerrada:
 
 ```bash
 pnpm docker:app:up
 ```
 
-Eso levanta `db` y `app` juntos en contenedores. Si tu `.env` ya apunta a Supabase, la app usa Supabase y el contenedor `db` queda solo como respaldo local.
+### Solo base de datos local
+
+- `pnpm docker:db:up`
+- `pnpm docker:db:down`
+- `pnpm docker:db:logs`
 
 ## Supabase
 
@@ -218,6 +245,12 @@ pnpm docker:prod:down
 - `pnpm docker:db:up`
 - `pnpm docker:db:down`
 - `pnpm docker:db:logs`
+- `pnpm docker:dev:up`
+- `pnpm docker:dev:down`
+- `pnpm docker:dev:logs`
+- `pnpm docker:dev:db:push`
+- `pnpm docker:dev:seed`
+- `pnpm docker:dev:reset`
 - `pnpm docker:app:up`
 - `pnpm docker:app:down`
 - `pnpm docker:prod:up`

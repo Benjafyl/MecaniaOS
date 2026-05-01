@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { MoveToTrashButton } from "@/components/trash/trash-ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getVehicleById } from "@/modules/vehicles/vehicle.service";
 import { WORK_ORDER_STATUS_LABELS } from "@/modules/work-orders/work-order.constants";
-import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type VehicleDetailPageProps = {
   params: Promise<{
@@ -45,18 +45,13 @@ export default async function VehicleDetailPage({ params }: VehicleDetailPagePro
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <form action={moveToTrashAction}>
-              <input name="entityId" type="hidden" value={vehicle.id} />
-              <input name="entityType" type="hidden" value="vehicle" />
-              <input name="redirectTo" type="hidden" value="/vehicles" />
-              <Button type="submit" variant="danger">
-                Enviar a papelera
-              </Button>
-            </form>
-            <Link href={`/work-orders/new?clientId=${vehicle.clientId}&vehicleId=${vehicle.id}`}>
-              <Button>Nueva orden</Button>
-            </Link>
+          <div className="flex items-start gap-5 lg:items-center">
+            <MoveToTrashButton entityId={vehicle.id} entityType="vehicle" redirectTo="/vehicles/trash" />
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/work-orders/new?clientId=${vehicle.clientId}&vehicleId=${vehicle.id}`}>
+                <Button>Nueva orden</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </Card>

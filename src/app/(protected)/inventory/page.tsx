@@ -5,9 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { MoveToTrashButton, SectionTrashLink } from "@/components/trash/trash-ui";
 import { getCurrentSession } from "@/modules/auth/auth.service";
 import { listInventory } from "@/modules/inventory/inventory.service";
-import { moveToTrashAction } from "@/app/(protected)/trash/actions";
 
 type InventoryPageProps = {
   searchParams: Promise<{
@@ -28,7 +28,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   return (
     <div className="space-y-6">
       <Card className="rounded-2xl">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
               Repuestos y stock
@@ -39,38 +39,38 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </p>
           </div>
 
-          <form className="flex flex-col gap-3 md:flex-row" method="get">
-            <Input defaultValue={q} name="q" placeholder="Buscar por nombre o codigo" />
-            <Select defaultValue={lowStock ?? ""} name="lowStock">
-              <option value="">Todo el inventario</option>
-              <option value="1">Solo stock bajo</option>
-            </Select>
-            <Button type="submit" variant="secondary">
-              Filtrar
-            </Button>
-          </form>
-        </div>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <form className="flex flex-col gap-3 md:flex-row" method="get">
+              <Input defaultValue={q} name="q" placeholder="Buscar por nombre o codigo" />
+              <Select defaultValue={lowStock ?? ""} name="lowStock">
+                <option value="">Todo el inventario</option>
+                <option value="1">Solo stock bajo</option>
+              </Select>
+              <Button type="submit" variant="secondary">
+                Filtrar
+              </Button>
+            </form>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          {isAdmin ? (
-            <>
-              <Link href="/trash">
-                <Button variant="secondary">Papelera</Button>
+            <div className="flex flex-wrap items-center gap-3">
+              {isAdmin ? (
+                <>
+                  <Link href="/inventory/entries/new">
+                    <Button variant="secondary">Ingreso de stock</Button>
+                  </Link>
+                  <Link href="/inventory/adjustments/new">
+                    <Button variant="secondary">Ajuste manual</Button>
+                  </Link>
+                  <Link href="/inventory/new">
+                    <Button>Nuevo repuesto</Button>
+                  </Link>
+                  <SectionTrashLink href="/inventory/trash" />
+                </>
+              ) : null}
+              <Link href="/inventory/movements">
+                <Button variant="secondary">Movimientos recientes</Button>
               </Link>
-              <Link href="/inventory/new">
-                <Button>Nuevo repuesto</Button>
-              </Link>
-              <Link href="/inventory/entries/new">
-                <Button variant="secondary">Ingreso de stock</Button>
-              </Link>
-              <Link href="/inventory/adjustments/new">
-                <Button variant="secondary">Ajuste manual</Button>
-              </Link>
-            </>
-          ) : null}
-          <Link href="/inventory/movements">
-            <Button variant="secondary">Movimientos recientes</Button>
-          </Link>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -113,15 +113,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
 
             {isAdmin ? (
-              <div className="flex justify-end">
-                <form action={moveToTrashAction}>
-                  <input name="entityId" type="hidden" value={repuesto.id} />
-                  <input name="entityType" type="hidden" value="repuesto" />
-                  <input name="redirectTo" type="hidden" value="/inventory" />
-                  <Button type="submit" variant="danger">
-                    Enviar a papelera
-                  </Button>
-                </form>
+              <div className="mt-4 flex justify-end">
+                <MoveToTrashButton
+                  entityId={repuesto.id}
+                  entityType="repuesto"
+                  redirectTo="/inventory"
+                />
               </div>
             ) : null}
           </Card>
