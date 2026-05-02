@@ -2,12 +2,12 @@ import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MoveToTrashButton, SectionTrashLink } from "@/components/trash/trash-ui";
 import { getCurrentSession } from "@/modules/auth/auth.service";
 import { listInventory } from "@/modules/inventory/inventory.service";
+
+import { InventoryFilters } from "./inventory-filters";
 
 type InventoryPageProps = {
   searchParams: Promise<{
@@ -40,35 +40,30 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           </div>
 
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <form className="flex flex-col gap-3 md:flex-row" method="get">
-              <Input defaultValue={q} name="q" placeholder="Buscar por nombre o codigo" />
-              <Select defaultValue={lowStock ?? ""} name="lowStock">
-                <option value="">Todo el inventario</option>
-                <option value="1">Solo stock bajo</option>
-              </Select>
-              <Button type="submit" variant="secondary">
-                Filtrar
-              </Button>
-            </form>
-
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap">
               {isAdmin ? (
                 <>
-                  <Link href="/inventory/entries/new">
-                    <Button variant="secondary">Ingreso de stock</Button>
-                  </Link>
-                  <Link href="/inventory/adjustments/new">
-                    <Button variant="secondary">Ajuste manual</Button>
-                  </Link>
                   <Link href="/inventory/new">
-                    <Button>Nuevo repuesto</Button>
+                    <Button className="whitespace-nowrap">Nuevo repuesto</Button>
                   </Link>
-                  <SectionTrashLink href="/inventory/trash" />
+                  <Link href="/inventory/stock/new">
+                    <Button className="whitespace-nowrap" variant="secondary">
+                      Ajuste de stock
+                    </Button>
+                  </Link>
                 </>
               ) : null}
               <Link href="/inventory/movements">
-                <Button variant="secondary">Movimientos recientes</Button>
+                <Button className="whitespace-nowrap" variant="secondary">
+                  Movimientos recientes
+                </Button>
               </Link>
+            </div>
+
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end xl:flex-nowrap">
+              <InventoryFilters lowStock={lowStock} q={q} />
+
+              {isAdmin ? <SectionTrashLink href="/inventory/trash" /> : null}
             </div>
           </div>
         </div>

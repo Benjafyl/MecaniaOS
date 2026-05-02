@@ -119,10 +119,10 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
         <div className="space-y-3">
           {inspections.map((inspection) => (
             <Card
-              className="rounded-[22px] border border-[rgba(37,99,235,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,250,255,0.98)_100%)] shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
+              className="rounded-xl border border-[rgba(37,99,235,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,250,255,0.98)_100%)] px-5 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
               key={inspection.id}
             >
-              <div className="flex flex-col gap-3 p-3.5 lg:grid lg:grid-cols-[1.7fr_0.7fr] lg:items-start lg:gap-3">
+              <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[1.7fr_0.78fr] lg:items-start lg:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-[rgba(37,99,235,0.16)] bg-[rgba(37,99,235,0.08)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#1d4ed8]">
@@ -171,12 +171,12 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
                   </div>
                 </div>
 
-                <div className="flex w-full flex-col gap-2.5 rounded-[18px] border border-[rgba(37,99,235,0.12)] bg-white/88 p-3">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                <div className="flex w-full flex-col gap-3 rounded-xl border border-[rgba(37,99,235,0.12)] bg-white/88 px-4 py-3 lg:max-w-[320px] lg:justify-self-end">
+                  <p className="text-[13px] font-medium text-[color:var(--muted-strong)] lg:text-sm">
                     Seguimiento
                   </p>
                   {inspection.criticalFindings.length > 0 ? (
-                    <div className="rounded-xl border border-[rgba(180,83,9,0.18)] bg-[rgba(245,158,11,0.08)] px-3 py-2.5 text-[11px] leading-5 text-[#9a3412]">
+                    <div className="rounded-lg border border-[rgba(180,83,9,0.18)] bg-[rgba(245,158,11,0.08)] px-3 py-2 text-[13px] leading-5 text-[#9a3412] lg:text-sm">
                       <span className="font-semibold uppercase tracking-[0.14em]">Alertas</span>
                       <p className="mt-1">
                         {inspection.criticalFindings
@@ -186,13 +186,13 @@ export default async function SelfInspectionsPage({ searchParams }: SelfInspecti
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-[rgba(22,163,74,0.16)] bg-[rgba(22,163,74,0.08)] px-3 py-2.5 text-[11px] leading-5 text-[#166534]">
+                    <div className="rounded-lg border border-[rgba(22,163,74,0.16)] bg-[rgba(22,163,74,0.08)] px-3 py-2 text-[13px] leading-5 text-[#166534] lg:text-sm">
                       Sin alertas criticas destacadas en este caso.
                     </div>
                   )}
 
                   <Link href={`/self-inspections/${inspection.id}`}>
-                    <Button className="h-11 w-full">Abrir inspeccion</Button>
+                    <Button className="w-full">Abrir inspeccion</Button>
                   </Link>
                 </div>
               </div>
