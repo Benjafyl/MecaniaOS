@@ -200,6 +200,7 @@ Flujo recomendado:
 Notas:
 
 - `docker-compose.dockploy.yml` sigue leyendo `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_*` y `APP_URL` reales del entorno de Dockploy.
+- En Dockploy el contenedor sincroniza Prisma con `pnpm db:push` antes de iniciar la app, para que los cambios de schema del branch queden aplicados al desplegar.
 - Los cambios hechos para `docker compose --profile dev` no alteran ese flujo.
 
 Comandos utiles para simular el deploy en local:
