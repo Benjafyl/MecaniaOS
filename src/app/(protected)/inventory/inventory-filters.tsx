@@ -11,50 +11,43 @@ type InventoryFiltersProps = {
   lowStock?: string;
 };
 
+function buildInventoryHref(pathname: string, nextQuery: string, nextLowStock: string) {
+  const params = new URLSearchParams();
+
+  if (nextQuery.trim()) {
+    params.set("q", nextQuery.trim());
+  }
+
+  if (nextLowStock) {
+    params.set("lowStock", nextLowStock);
+  }
+
+  return params.size > 0 ? `${pathname}?${params.toString()}` : pathname;
+}
+
 export function InventoryFilters({ q, lowStock }: InventoryFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
-  const [query, setQuery] = useState(q ?? "");
+  const initialQuery = q ?? "";
+  const [query, setQuery] = useState(initialQuery);
   const [stockFilter, setStockFilter] = useState(lowStock ?? "");
 
   useEffect(() => {
-    setQuery(q ?? "");
-  }, [q]);
-
-  useEffect(() => {
-    setStockFilter(lowStock ?? "");
-  }, [lowStock]);
-
-  function navigate(nextQuery: string, nextLowStock: string) {
-    const params = new URLSearchParams();
-
-    if (nextQuery.trim()) {
-      params.set("q", nextQuery.trim());
-    }
-
-    if (nextLowStock) {
-      params.set("lowStock", nextLowStock);
-    }
-
-    const href = params.size > 0 ? `${pathname}?${params.toString()}` : pathname;
-
-    startTransition(() => {
-      router.replace(href);
-    });
-  }
-
-  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      if (query === (q ?? "")) {
+      if (query === initialQuery) {
         return;
       }
 
-      navigate(query, stockFilter);
+      const href = buildInventoryHref(pathname, query, stockFilter);
+
+      startTransition(() => {
+        router.replace(href);
+      });
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [q, query, stockFilter]);
+  }, [initialQuery, pathname, query, router, startTransition, stockFilter]);
 
   return (
     <div
@@ -74,7 +67,11 @@ export function InventoryFilters({ q, lowStock }: InventoryFiltersProps) {
         onChange={(event) => {
           const nextLowStock = event.target.value;
           setStockFilter(nextLowStock);
-          navigate(query, nextLowStock);
+          const href = buildInventoryHref(pathname, query, nextLowStock);
+
+          startTransition(() => {
+            router.replace(href);
+          });
         }}
         value={stockFilter}
       >

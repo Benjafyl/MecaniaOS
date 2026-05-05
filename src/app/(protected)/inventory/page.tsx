@@ -61,7 +61,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
 
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end xl:flex-nowrap">
-              <InventoryFilters lowStock={lowStock} q={q} />
+              <InventoryFilters
+                key={`${q ?? ""}:${lowStock ?? ""}`}
+                lowStock={lowStock}
+                q={q}
+              />
 
               {isAdmin ? <SectionTrashLink href="/inventory/trash" /> : null}
             </div>

@@ -88,32 +88,19 @@ async function hardDeleteVehicleTx(tx: TrashTx, id: string) {
 }
 
 async function hardDeleteClientTx(tx: TrashTx, id: string) {
-  const [workOrders, budgets, vehicles, selfInspections] = await Promise.all([
-    tx.workOrder.findMany({
-      where: { clientId: id },
-      select: { id: true },
-    }),
-    tx.budget.findMany({
-      where: { clientId: id },
-      select: { id: true },
-    }),
+  const [vehicles, selfInspections] = await Promise.all([
     tx.vehicle.findMany({
       where: { clientId: id },
       select: { id: true },
     }),
     tx.selfInspection.findMany({
-      where: { customerId: id },
+      where: {
+        customerId: id,
+        vehicleId: null,
+      },
       select: { id: true },
     }),
   ]);
-
-  for (const workOrder of workOrders) {
-    await hardDeleteWorkOrderTx(tx, workOrder.id);
-  }
-
-  for (const budget of budgets) {
-    await hardDeleteBudgetTx(tx, budget.id);
-  }
 
   for (const vehicle of vehicles) {
     await hardDeleteVehicleTx(tx, vehicle.id);
