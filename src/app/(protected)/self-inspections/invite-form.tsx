@@ -11,13 +11,11 @@ export function InviteForm() {
   const [state, formAction] = useActionState(createSelfInspectionInviteAction, initialActionState);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="rounded-[20px] border border-[rgba(14,79,82,0.14)] bg-[rgba(14,79,82,0.06)] px-4 py-3 text-sm text-[color:var(--muted-strong)]">
-        Genera un enlace en blanco y compartelo. El cliente se identifica cuando lo abre:
-        si ya tiene cuenta inicia sesion, y si no, la crea en ese momento.
-      </div>
-
-      <FormMessage message={state.error} />
+    <form action={formAction} className="flex flex-col items-end gap-3">
+      <FormMessage
+        className="max-w-sm border-[rgba(255,255,255,0.16)] bg-[rgba(153,27,27,0.28)] text-white"
+        message={state.error}
+      />
       <SubmitButton label="Generar enlace seguro" pendingLabel="Generando enlace..." />
     </form>
   );

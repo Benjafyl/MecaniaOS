@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentSession } from "@/modules/auth/auth.service";
 import { logoutAction } from "@/app/(protected)/actions";
+import { purgeExpiredTrash } from "@/modules/trash/trash.service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function ProtectedLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await purgeExpiredTrash();
   const session = await getCurrentSession();
 
   if (!session) {

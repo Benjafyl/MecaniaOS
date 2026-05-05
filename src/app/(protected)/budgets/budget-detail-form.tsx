@@ -76,7 +76,6 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
     initialActionState,
   );
   const isDraft = budget.status === BudgetStatus.DRAFT;
-  const canApproveOrReject = budget.status === BudgetStatus.SENT;
   const canCreateWorkOrder = budget.status === BudgetStatus.APPROVED && !budget.workOrder;
 
   return (
@@ -150,8 +149,8 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
             <p className="text-sm text-[color:var(--muted-strong)]">
               {isDraft
                 ? "Cuando el borrador este listo, puedes enviarlo al cliente para revision."
-                : canApproveOrReject
-                  ? "Este presupuesto ya fue enviado. Ahora puedes aprobarlo o rechazarlo."
+                : budget.status === BudgetStatus.SENT
+                  ? "Este presupuesto ya fue enviado. El cliente debe revisarlo desde su portal para aprobarlo o rechazarlo."
                   : budget.status === BudgetStatus.APPROVED
                     ? "El presupuesto ya fue aprobado y queda listo para transformarse en orden de trabajo."
                     : budget.status === BudgetStatus.CONVERTED_TO_WORK_ORDER
@@ -160,7 +159,7 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
             </p>
           </div>
 
-          {isDraft || canApproveOrReject ? (
+          {isDraft ? (
             <div className="space-y-2">
               <label
                 className="text-sm font-medium text-[color:var(--muted-strong)]"
@@ -171,11 +170,7 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
               <Textarea
                 id="transitionNote"
                 name="note"
-                placeholder={
-                  isDraft
-                    ? "Ej. Presupuesto revisado internamente y enviado al cliente."
-                    : "Ej. Cliente aprueba el presupuesto completo."
-                }
+                placeholder="Ej. Presupuesto revisado internamente y enviado al cliente."
               />
             </div>
           ) : null}
@@ -183,23 +178,8 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
           <div className="flex flex-wrap gap-3">
             {isDraft ? (
               <Button name="nextStatus" type="submit" value={BudgetStatus.SENT}>
-                Enviar presupuesto
+                Enviar al cliente
               </Button>
-            ) : null}
-            {canApproveOrReject ? (
-              <>
-                <Button name="nextStatus" type="submit" value={BudgetStatus.APPROVED}>
-                  Aprobar presupuesto
-                </Button>
-                <Button
-                  name="nextStatus"
-                  type="submit"
-                  value={BudgetStatus.REJECTED}
-                  variant="secondary"
-                >
-                  Rechazar presupuesto
-                </Button>
-              </>
             ) : null}
           </div>
 

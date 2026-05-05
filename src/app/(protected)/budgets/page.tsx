@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MoveToTrashButton, SectionTrashLink } from "@/components/trash/trash-ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { BudgetStatusBadge } from "@/modules/budgets/budget-status-badge";
 import { listBudgets } from "@/modules/budgets/budget.service";
@@ -20,7 +21,7 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
   return (
     <div className="space-y-6">
       <Card className="rounded-2xl">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
               Presupuestos y aprobaciones
@@ -31,16 +32,24 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 md:flex-row">
-            <form className="flex gap-3" method="get">
-              <Input defaultValue={q} name="q" placeholder="Buscar por numero, cliente o vehiculo" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <form className="flex flex-col gap-3 md:flex-row lg:min-w-[520px]" method="get">
+              <Input
+                defaultValue={q}
+                name="q"
+                placeholder="Buscar por numero, cliente o vehiculo"
+              />
               <Button type="submit" variant="secondary">
                 Buscar
               </Button>
             </form>
-            <Link href="/budgets/new">
-              <Button>Nuevo presupuesto</Button>
-            </Link>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/budgets/new">
+                <Button>Nuevo presupuesto</Button>
+              </Link>
+              <SectionTrashLink href="/budgets/trash" />
+            </div>
           </div>
         </div>
       </Card>
@@ -96,13 +105,16 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Link
-                  className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
-                  href={`/budgets/${budget.id}`}
-                >
-                  Ver detalle
-                </Link>
+              <div className="flex items-start justify-end gap-5">
+                <MoveToTrashButton entityId={budget.id} entityType="budget" redirectTo="/budgets" />
+                <div className="flex flex-wrap justify-end gap-3">
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/budgets/${budget.id}`}
+                  >
+                    Ver detalle
+                  </Link>
+                </div>
               </div>
             </div>
           </Card>

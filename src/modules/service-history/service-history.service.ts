@@ -2,11 +2,17 @@ import { NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 
 export async function getHistoryByVehicleId(vehicleId: string) {
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id: vehicleId },
+  const vehicle = await prisma.vehicle.findFirst({
+    where: {
+      id: vehicleId,
+      deletedAt: null,
+    },
     include: {
       client: true,
       workOrders: {
+        where: {
+          deletedAt: null,
+        },
         include: {
           statusLogs: {
             include: {
@@ -40,9 +46,10 @@ export async function getHistoryByVehicleId(vehicleId: string) {
 }
 
 export async function getHistoryByVin(vin: string) {
-  const vehicle = await prisma.vehicle.findUnique({
+  const vehicle = await prisma.vehicle.findFirst({
     where: {
       vin: vin.toUpperCase(),
+      deletedAt: null,
     },
     select: {
       id: true,

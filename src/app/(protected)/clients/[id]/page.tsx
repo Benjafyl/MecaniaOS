@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MoveToTrashButton } from "@/components/trash/trash-ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { normalizeError } from "@/lib/errors";
 import { formatDate } from "@/lib/utils";
@@ -41,9 +42,14 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
             </p>
           </div>
 
-          <Link href={`/vehicles/new?clientId=${client.id}`}>
-            <Button>Agregar vehiculo</Button>
-          </Link>
+          <div className="flex items-start gap-5 lg:items-center">
+            <MoveToTrashButton entityId={client.id} entityType="client" redirectTo="/clients/trash" />
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/vehicles/new?clientId=${client.id}`}>
+                <Button>Agregar vehiculo</Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </Card>
 

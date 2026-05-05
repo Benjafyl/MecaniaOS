@@ -67,101 +67,108 @@ Documentacion base:
 
 ## Variables de entorno
 
-Crear `.env` o `.env.local` usando [`.env.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.example) como base.
+Hay dos juegos de variables separados:
 
-Para Supabase y deploy en servidor ahora se usan estas variables:
-
-```env
-DATABASE_URL="postgresql://postgres.PROJECT_REF:YOUR_DB_PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
-DIRECT_URL="postgresql://postgres.PROJECT_REF:YOUR_DB_PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
-SESSION_SECRET="replace-this-with-a-long-random-secret"
-APP_URL="https://your-domain.com"
-SUPABASE_URL="https://PROJECT_REF.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-SUPABASE_STORAGE_BUCKET_SELF_INSPECTIONS="self-inspections"
-SUPABASE_STORAGE_BUCKET_WORK_ORDERS="work-orders"
-BOOTSTRAP_ADMIN_NAME="Administrador"
-BOOTSTRAP_ADMIN_EMAIL="admin@your-domain.com"
-BOOTSTRAP_ADMIN_PASSWORD="replace-this-admin-password"
-```
+- Desarrollo local fuera de Docker: usa [`.env.local.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.local.example)
+- Deploy / Dockploy: usa [`.env.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.example)
 
 Notas:
 
-- `DATABASE_URL` y `DIRECT_URL` usan el `pooler` de Supabase para evitar problemas de conectividad IPv6 en servidores.
+- `DATABASE_URL` y `DIRECT_URL` de deploy usan el `pooler` de Supabase para evitar problemas de conectividad IPv6 en servidores.
 - Los buckets `self-inspections` y `work-orders` deben existir en Supabase Storage.
 - Si defines `BOOTSTRAP_ADMIN_*`, el contenedor crea o reactiva un administrador al arrancar.
 
-## Ejecucion local
+## Levantado local
 
-### Si cambias a una rama nueva de Sprint 2
+### Modo recomendado: Docker con hot reload
 
-Cada vez que hagas checkout de una rama que cambie Prisma o datos base, corre estos pasos antes de probar:
-
-```bash
-pnpm install
-pnpm db:generate
-pnpm db:push
-pnpm db:seed
-```
-
-Esto es especialmente importante en ramas como inventario y presupuestos, porque si no cargas los datos iniciales puedes quedar con catalogos vacios y el flujo se ve roto aunque el codigo este bien.
-
-1. Instalar dependencias:
+Este es el flujo recomendado para desarrollar en local:
 
 ```bash
-pnpm install
+corepack pnpm docker:dev:up
 ```
 
-2. Levantar PostgreSQL con Docker:
+Luego abre:
 
-```bash
-pnpm docker:db:up
+```text
+http://localhost:3000/login
 ```
 
-3. Generar cliente de Prisma:
+Este modo queda aislado del deploy:
 
-```bash
-pnpm db:generate
-```
-
-4. Crear la base o aplicar esquema:
-
-```bash
-pnpm db:push
-```
-
-5. Cargar datos iniciales:
-
-```bash
-pnpm db:seed
-```
-
-6. Levantar la aplicacion:
-
-```bash
-pnpm dev
-```
-
-## Flujo con Docker
-
-Uso recomendado para desarrollo de equipo:
-
-- App local con `pnpm dev`
-- Base de datos en Docker con `pnpm docker:db:up`
+- `app-dev` siempre usa PostgreSQL local en `db:5432`
+- no reutiliza `DATABASE_URL`, `DIRECT_URL` ni `SUPABASE_*` del `.env` de Dockploy
+- al recrear el contenedor se regenera `.next`, evitando que queden assets viejos pegados
+- los cambios en `src/` se reflejan por hot reload
 
 Comandos utiles:
 
-- `pnpm docker:db:up`
-- `pnpm docker:db:down`
-- `pnpm docker:db:logs`
+- `corepack pnpm docker:dev:up`
+- `corepack pnpm docker:dev:down`
+- `corepack pnpm docker:dev:logs`
+- `corepack pnpm docker:dev:db:push`
+- `corepack pnpm docker:dev:seed`
+- `corepack pnpm docker:dev:reset`
 
-Tambien deje preparada una imagen de la app:
+Si cambias a una rama que modifica Prisma o datos base, corre despues:
 
 ```bash
-pnpm docker:app:up
+corepack pnpm docker:dev:db:push
+corepack pnpm docker:dev:seed
 ```
 
-Eso levanta `db` y `app` juntos en contenedores. Si tu `.env` ya apunta a Supabase, la app usa Supabase y el contenedor `db` queda solo como respaldo local.
+Si algo queda raro con caches o dependencias, usa:
+
+```bash
+corepack pnpm docker:dev:reset
+corepack pnpm docker:dev:up
+```
+
+### Modo local fuera de Docker
+
+Si quieres correr Next directamente en tu maquina:
+
+1. Copia [`.env.local.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.local.example) a `.env.local`
+2. Levanta la base local:
+
+```bash
+corepack pnpm docker:db:up
+```
+
+3. Instala dependencias y sincroniza Prisma:
+
+```bash
+corepack pnpm install
+corepack pnpm db:generate
+corepack pnpm db:push
+corepack pnpm db:seed
+```
+
+4. Inicia la app:
+
+```bash
+corepack pnpm dev
+```
+
+### Imagen de produccion local
+
+Para validar una build cerrada parecida al deploy, pero usando recursos locales seguros:
+
+```bash
+corepack pnpm docker:app:up
+```
+
+Para apagarla:
+
+```bash
+corepack pnpm docker:app:down
+```
+
+### Solo base de datos local
+
+- `corepack pnpm docker:db:up`
+- `corepack pnpm docker:db:down`
+- `corepack pnpm docker:db:logs`
 
 ## Supabase
 
@@ -180,21 +187,27 @@ npx supabase db push --linked
 
 ## Dockploy
 
-Deje listo [docker-compose.dockploy.yml](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/docker-compose.dockploy.yml) para desplegar `main` en Dockploy.
+Deje listo [docker-compose.dockploy.yml](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/docker-compose.dockploy.yml) para desplegar en Dockploy sin mezclar configuracion de desarrollo local.
 
 Flujo recomendado:
 
 1. En Dockploy crear el servicio usando `docker-compose.dockploy.yml`.
-2. Cargar las variables del bloque `.env.example`.
+2. Cargar las variables de [`.env.example`](/C:/Users/nacho/OneDrive/Escritorio/MecaniaOS/MecaniaOS/.env.example).
 3. Confirmar que `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y los buckets esten configurados.
 4. Si es el primer deploy, dejar `BOOTSTRAP_ADMIN_*` cargado para crear el acceso inicial.
 5. Desplegar.
 
+Notas:
+
+- `docker-compose.dockploy.yml` sigue leyendo `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_*` y `APP_URL` reales del entorno de Dockploy.
+- En Dockploy el contenedor sincroniza Prisma con `pnpm db:push` antes de iniciar la app, para que los cambios de schema del branch queden aplicados al desplegar.
+- Los cambios hechos para `docker compose --profile dev` no alteran ese flujo.
+
 Comandos utiles para simular el deploy en local:
 
 ```bash
-pnpm docker:prod:up
-pnpm docker:prod:down
+corepack pnpm docker:prod:up
+corepack pnpm docker:prod:down
 ```
 
 ## Datos iniciales
@@ -218,6 +231,12 @@ pnpm docker:prod:down
 - `pnpm docker:db:up`
 - `pnpm docker:db:down`
 - `pnpm docker:db:logs`
+- `pnpm docker:dev:up`
+- `pnpm docker:dev:down`
+- `pnpm docker:dev:logs`
+- `pnpm docker:dev:db:push`
+- `pnpm docker:dev:seed`
+- `pnpm docker:dev:reset`
 - `pnpm docker:app:up`
 - `pnpm docker:app:down`
 - `pnpm docker:prod:up`

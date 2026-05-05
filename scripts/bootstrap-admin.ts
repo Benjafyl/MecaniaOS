@@ -1,7 +1,9 @@
 import { hash } from "bcryptjs";
-import { UserRole } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+});
 
 const adminEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
 const adminPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim();

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { MoveToTrashButton, SectionTrashLink } from "@/components/trash/trash-ui";
 import { formatDate } from "@/lib/utils";
 import {
   WORK_ORDER_STATUS_OPTIONS,
@@ -34,7 +35,7 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
   return (
     <div className="space-y-6">
       <Card className="rounded-2xl">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
               Nucleo operativo
@@ -42,9 +43,13 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
             <h1 className="mt-2 font-heading text-3xl font-semibold">Ordenes de trabajo</h1>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <form className="flex flex-col gap-3 md:flex-row" method="get">
-              <Input defaultValue={q} name="q" placeholder="Buscar por OT, cliente, VIN o patente" />
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <form className="flex flex-col gap-3 md:flex-row lg:min-w-[640px]" method="get">
+              <Input
+                defaultValue={q}
+                name="q"
+                placeholder="Buscar por OT, cliente, VIN o patente"
+              />
               <Select defaultValue={status ?? ""} name="status">
                 <option value="">Todos los estados</option>
                 {WORK_ORDER_STATUS_OPTIONS.map((option) => (
@@ -57,9 +62,13 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 Filtrar
               </Button>
             </form>
-            <Link href="/work-orders/new">
-              <Button>Nueva orden</Button>
-            </Link>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/work-orders/new">
+                <Button>Nueva orden</Button>
+              </Link>
+              <SectionTrashLink href="/work-orders/trash" />
+            </div>
           </div>
         </div>
       </Card>
@@ -82,16 +91,26 @@ export default async function WorkOrdersPage({ searchParams }: WorkOrdersPagePro
                 <p className="mt-1 text-sm text-[color:var(--muted)]">{order.reason}</p>
               </div>
 
-              <div className="flex flex-col items-start gap-2 md:items-end">
-                <p className="text-sm text-[color:var(--muted)]">
-                  Ingreso {formatDate(order.intakeDate)}
-                </p>
-                <p className="text-sm text-[color:var(--muted)]">
-                  Estado {WORK_ORDER_STATUS_LABELS[order.status]}
-                </p>
-                <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/work-orders/${order.id}`}>
-                  Abrir orden
-                </Link>
+              <div className="flex items-start gap-5 md:items-center">
+                <MoveToTrashButton
+                  entityId={order.id}
+                  entityType="workOrder"
+                  redirectTo="/work-orders"
+                />
+                <div className="space-y-2">
+                  <p className="text-sm text-[color:var(--muted)]">
+                    Ingreso {formatDate(order.intakeDate)}
+                  </p>
+                  <p className="text-sm text-[color:var(--muted)]">
+                    Estado {WORK_ORDER_STATUS_LABELS[order.status]}
+                  </p>
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/work-orders/${order.id}`}
+                  >
+                    Abrir orden
+                  </Link>
+                </div>
               </div>
             </div>
           </Card>

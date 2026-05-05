@@ -7,8 +7,11 @@ import {
 import { vehicleRepository } from "@/modules/vehicles/vehicle.repository";
 
 async function assertClientExists(clientId: string) {
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
+  const client = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      deletedAt: null,
+    },
     select: { id: true },
   });
 

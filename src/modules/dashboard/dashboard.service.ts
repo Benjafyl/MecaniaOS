@@ -7,14 +7,25 @@ export async function getDashboardSummary(input?: { actorId?: string; actorRole?
   const workOrderWhere: Prisma.WorkOrderWhereInput =
     input?.actorRole === UserRole.MECHANIC && input.actorId
       ? {
+          deletedAt: null,
           assignedTechnicianId: input.actorId,
         }
-      : {};
+      : {
+          deletedAt: null,
+        };
 
   const [clients, vehicles, activeOrders, awaitingApproval, readyForDelivery, latestOrders] =
     await Promise.all([
-      prisma.client.count(),
-      prisma.vehicle.count(),
+      prisma.client.count({
+        where: {
+          deletedAt: null,
+        },
+      }),
+      prisma.vehicle.count({
+        where: {
+          deletedAt: null,
+        },
+      }),
       prisma.workOrder.count({
         where: {
           ...workOrderWhere,

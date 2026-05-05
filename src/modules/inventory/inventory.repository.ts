@@ -4,24 +4,27 @@ import { prisma } from "@/lib/prisma";
 
 export const inventoryRepository = {
   listRepuestos(search?: string) {
-    const where: Prisma.RepuestoWhereInput | undefined = search
-      ? {
-          OR: [
-            {
-              name: {
-                contains: search,
-                mode: "insensitive",
+    const where: Prisma.RepuestoWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              {
+                name: {
+                  contains: search,
+                  mode: "insensitive",
+                },
               },
-            },
-            {
-              code: {
-                contains: search,
-                mode: "insensitive",
+              {
+                code: {
+                  contains: search,
+                  mode: "insensitive",
+                },
               },
-            },
-          ],
-        }
-      : undefined;
+            ],
+          }
+        : {}),
+    };
 
     return prisma.repuesto.findMany({
       where,
@@ -31,6 +34,9 @@ export const inventoryRepository = {
 
   listAvailableRepuestos() {
     return prisma.repuesto.findMany({
+      where: {
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,

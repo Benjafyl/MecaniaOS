@@ -36,9 +36,6 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
           <h1 className="mt-3 font-heading text-[28px] font-semibold text-white">
             Operacion de taller
           </h1>
-          <p className="mt-3 text-sm leading-6 text-[#d7e5fb]">
-            Consola interna para clientes, vehiculos, ordenes y seguimiento tecnico.
-          </p>
         </div>
 
         <div className="mt-6 flex-1">
@@ -64,34 +61,19 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col gap-4">
-        <header className="flex flex-col gap-4 rounded-2xl border border-[color:var(--border)] bg-white/[0.82] px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-[#5f7fa8]">
-              Workspace interno
-            </p>
-            <h2 className="mt-2 font-heading text-3xl font-semibold text-[color:var(--foreground)]">
-              MecaniaOS
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm text-[color:var(--muted-strong)]">
-              Operacion, trazabilidad y seguimiento tecnico desde una interfaz mas limpia y
-              enfocada en el trabajo diario.
+        <div className="flex items-center justify-end gap-3 lg:hidden">
+          <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] px-4 py-3">
+            <p className="text-sm font-semibold text-[color:var(--foreground)]">{user.name}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              {roleLabel(user.role)}
             </p>
           </div>
-
-          <div className="flex items-center gap-3 lg:hidden">
-            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] px-4 py-3">
-              <p className="text-sm font-semibold text-[color:var(--foreground)]">{user.name}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                {roleLabel(user.role)}
-              </p>
-            </div>
-            <form action={onLogout}>
-              <Button type="submit" variant="secondary">
-                Salir
-              </Button>
-            </form>
-          </div>
-        </header>
+          <form action={onLogout}>
+            <Button type="submit" variant="secondary">
+              Salir
+            </Button>
+          </form>
+        </div>
 
         <main className="pb-8">{children}</main>
       </div>

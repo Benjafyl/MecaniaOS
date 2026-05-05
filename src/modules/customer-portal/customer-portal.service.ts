@@ -1,7 +1,8 @@
+import { BudgetStatus, SelfInspectionStatus, WorkOrderStatus } from "@prisma/client";
+
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { requireCustomerUser } from "@/modules/auth/auth.service";
-import { SelfInspectionStatus, WorkOrderStatus } from "@prisma/client";
 import {
   getWorkOrderProgressPercent,
   isClosedStatus,
@@ -21,6 +22,13 @@ const CUSTOMER_PORTAL_PENDING_INSPECTION_STATUSES = [
   SelfInspectionStatus.REVIEWED,
 ] as const;
 
+const CUSTOMER_PORTAL_VISIBLE_BUDGET_STATUSES = [
+  BudgetStatus.SENT,
+  BudgetStatus.APPROVED,
+  BudgetStatus.REJECTED,
+  BudgetStatus.CONVERTED_TO_WORK_ORDER,
+] as const;
+
 export async function getCustomerPortalOverview() {
   const session = await requireCustomerUser();
 
@@ -29,23 +37,32 @@ export async function getCustomerPortalOverview() {
       customer: null,
       vehicles: [],
       pendingInspections: [],
+      budgets: [],
       stats: {
         vehicles: 0,
         pendingInspections: 0,
         openOrders: 0,
         readyForDelivery: 0,
+        pendingBudgets: 0,
       },
     };
   }
 
-  const customer = await prisma.client.findUnique({
+  const customer = await prisma.client.findFirst({
     where: {
       id: session.user.clientId,
+      deletedAt: null,
     },
     include: {
       vehicles: {
+        where: {
+          deletedAt: null,
+        },
         include: {
           workOrders: {
+            where: {
+              deletedAt: null,
+            },
             include: {
               statusLogs: {
                 orderBy: {
@@ -65,6 +82,7 @@ export async function getCustomerPortalOverview() {
       },
       selfInspections: {
         where: {
+          deletedAt: null,
           vehicleId: null,
           status: {
             in: [...CUSTOMER_PORTAL_PENDING_INSPECTION_STATUSES],
@@ -77,11 +95,41 @@ export async function getCustomerPortalOverview() {
           createdAt: "desc",
         },
       },
+      budgets: {
+        where: {
+          deletedAt: null,
+          status: {
+            in: [...CUSTOMER_PORTAL_VISIBLE_BUDGET_STATUSES],
+          },
+        },
+        include: {
+          vehicle: true,
+          workOrder: true,
+          items: {
+            orderBy: [{ itemType: "asc" }, { description: "asc" }],
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
 
   if (!customer) {
-    throw new NotFoundError("Cliente no encontrado");
+    return {
+      customer: null,
+      vehicles: [],
+      pendingInspections: [],
+      budgets: [],
+      stats: {
+        vehicles: 0,
+        pendingInspections: 0,
+        openOrders: 0,
+        readyForDelivery: 0,
+        pendingBudgets: 0,
+      },
+    };
   }
 
   const vehicles = customer.vehicles.map((vehicle) => {
@@ -97,6 +145,7 @@ export async function getCustomerPortalOverview() {
     ...inspection,
     progressPercent: inspection.completionPercent,
   }));
+  const budgets = customer.budgets;
 
   const openOrders = vehicles.filter(
     (vehicle) => vehicle.currentOrder && !isClosedStatus(vehicle.currentOrder.status),
@@ -104,16 +153,19 @@ export async function getCustomerPortalOverview() {
   const readyForDelivery = vehicles.filter(
     (vehicle) => vehicle.currentOrder?.status === WorkOrderStatus.READY_FOR_DELIVERY,
   ).length;
+  const pendingBudgets = budgets.filter((budget) => budget.status === BudgetStatus.SENT).length;
 
   return {
     customer,
     vehicles,
     pendingInspections,
+    budgets,
     stats: {
       vehicles: vehicles.length,
       pendingInspections: pendingInspections.length,
       openOrders,
       readyForDelivery,
+      pendingBudgets,
     },
   };
 }
@@ -129,10 +181,14 @@ export async function getCustomerPortalVehicleDetail(vehicleId: string) {
     where: {
       id: vehicleId,
       clientId: session.user.clientId,
+      deletedAt: null,
     },
     include: {
       client: true,
       workOrders: {
+        where: {
+          deletedAt: null,
+        },
         include: {
           evidences: {
             include: {
@@ -181,4 +237,91 @@ export async function getCustomerPortalVehicleDetail(vehicleId: string) {
     featuredOrder,
     progressPercent: currentOrder ? getWorkOrderProgressPercent(currentOrder.status) : 0,
   };
+}
+
+export async function getCustomerPortalBudgetDetail(budgetId: string) {
+  const session = await requireCustomerUser();
+
+  if (!session.user.clientId) {
+    throw new UnauthorizedError("Tu acceso al portal aun no esta habilitado");
+  }
+
+  const budget = await prisma.budget.findFirst({
+    where: {
+      id: budgetId,
+      clientId: session.user.clientId,
+      deletedAt: null,
+      status: {
+        in: [...CUSTOMER_PORTAL_VISIBLE_BUDGET_STATUSES],
+      },
+    },
+    include: {
+      client: true,
+      vehicle: true,
+      workOrder: true,
+      items: {
+        orderBy: [{ itemType: "asc" }, { description: "asc" }],
+      },
+      statusLogs: {
+        include: {
+          changedBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          changedAt: "desc",
+        },
+      },
+    },
+  });
+
+  if (!budget) {
+    throw new NotFoundError("Presupuesto no encontrado");
+  }
+
+  return budget;
+}
+
+export async function respondToCustomerBudget(
+  budgetId: string,
+  input: {
+    nextStatus: "APPROVED" | "REJECTED";
+    note?: string;
+  },
+) {
+  const session = await requireCustomerUser();
+  const budget = await getCustomerPortalBudgetDetail(budgetId);
+
+  if (budget.status !== BudgetStatus.SENT) {
+    throw new UnauthorizedError("Este presupuesto ya no admite respuesta del cliente");
+  }
+
+  const changedAt = new Date();
+
+  return prisma.budget.update({
+    where: {
+      id: budget.id,
+    },
+    data: {
+      status: input.nextStatus,
+      updatedById: session.user.id,
+      approvedAt: input.nextStatus === BudgetStatus.APPROVED ? changedAt : undefined,
+      rejectedAt: input.nextStatus === BudgetStatus.REJECTED ? changedAt : undefined,
+      statusLogs: {
+        create: {
+          previousStatus: budget.status,
+          nextStatus: input.nextStatus,
+          note: input.note?.trim() || undefined,
+          changedById: session.user.id,
+          changedAt,
+        },
+      },
+    },
+    include: {
+      workOrder: true,
+    },
+  });
 }

@@ -4,44 +4,47 @@ import { prisma } from "@/lib/prisma";
 
 export const vehicleRepository = {
   list(search?: string) {
-    const where: Prisma.VehicleWhereInput | undefined = search
-      ? {
-          OR: [
-            {
-              plate: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-            {
-              vin: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-            {
-              make: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-            {
-              model: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-            {
-              client: {
-                fullName: {
+    const where: Prisma.VehicleWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+            OR: [
+              {
+                plate: {
                   contains: search,
                   mode: "insensitive",
                 },
               },
-            },
-          ],
-        }
-      : undefined;
+              {
+                vin: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                make: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                model: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+              {
+                client: {
+                  fullName: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
 
     return prisma.vehicle.findMany({
       where,
@@ -49,7 +52,11 @@ export const vehicleRepository = {
         client: true,
         _count: {
           select: {
-            workOrders: true,
+            workOrders: {
+              where: {
+                deletedAt: null,
+              },
+            },
           },
         },
       },
@@ -60,11 +67,17 @@ export const vehicleRepository = {
   },
 
   findById(id: string) {
-    return prisma.vehicle.findUnique({
-      where: { id },
+    return prisma.vehicle.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
       include: {
         client: true,
         workOrders: {
+          where: {
+            deletedAt: null,
+          },
           include: {
             statusLogs: {
               orderBy: {
@@ -88,6 +101,7 @@ export const vehicleRepository = {
 
     return prisma.vehicle.findFirst({
       where: {
+        deletedAt: null,
         OR: [
           input.vin
             ? {
