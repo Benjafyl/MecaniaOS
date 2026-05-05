@@ -75,7 +75,11 @@ export function ClientForm() {
 
       <FormMessage message={state.error} />
 
-      <SubmitButton label="Crear cliente" pendingLabel="Creando cliente..." />
+      <SubmitButton
+        className="w-full sm:w-auto"
+        label="Crear cliente"
+        pendingLabel="Creando cliente..."
+      />
     </form>
   );
 }

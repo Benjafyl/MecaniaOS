@@ -35,6 +35,11 @@ type BudgetDetailFormProps = {
       id: string;
       orderNumber: string;
     } | null;
+    insuranceCase: {
+      id: string;
+      caseNumber: string;
+      liquidatorName: string;
+    } | null;
     selfInspection: {
       id: string;
     } | null;
@@ -105,6 +110,18 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
                 </a>
               </p>
             ) : null}
+            {budget.insuranceCase ? (
+              <p className="text-sm text-[color:var(--muted)]">
+                Caso aseguradora:{" "}
+                <a
+                  className="font-medium text-[#2563eb] hover:text-[#1d4ed8]"
+                  href={`/insurance-cases/${budget.insuranceCase.id}`}
+                >
+                  {budget.insuranceCase.caseNumber}
+                </a>{" "}
+                / Liquidador {budget.insuranceCase.liquidatorName}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -148,9 +165,13 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
             </p>
             <p className="text-sm text-[color:var(--muted-strong)]">
               {isDraft
-                ? "Cuando el borrador este listo, puedes enviarlo al cliente para revision."
+                ? budget.insuranceCase
+                  ? "Cuando el borrador este listo, puedes enviarlo al cliente y quedara visible de inmediato para el liquidador asignado."
+                  : "Cuando el borrador este listo, puedes enviarlo al cliente para revision."
                 : budget.status === BudgetStatus.SENT
-                  ? "Este presupuesto ya fue enviado. El cliente debe revisarlo desde su portal para aprobarlo o rechazarlo."
+                  ? budget.insuranceCase
+                    ? "Este presupuesto ya fue enviado. El cliente puede verlo y el liquidador de la aseguradora debe resolver su aprobacion desde su portal."
+                    : "Este presupuesto ya fue enviado. El cliente debe revisarlo desde su portal para aprobarlo o rechazarlo."
                   : budget.status === BudgetStatus.APPROVED
                     ? "El presupuesto ya fue aprobado y queda listo para transformarse en orden de trabajo."
                     : budget.status === BudgetStatus.CONVERTED_TO_WORK_ORDER
@@ -178,12 +199,15 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
           <div className="flex flex-wrap gap-3">
             {isDraft ? (
               <Button name="nextStatus" type="submit" value={BudgetStatus.SENT}>
-                Enviar al cliente
+                {budget.insuranceCase ? "Enviar a cliente y liquidador" : "Enviar al cliente"}
               </Button>
             ) : null}
           </div>
 
-          <FormMessage message={transitionState.error} />
+          <FormMessage
+            message={transitionState.error ?? transitionState.success}
+            tone={transitionState.success ? "success" : "error"}
+          />
         </form>
 
         {canCreateWorkOrder ? (
@@ -352,7 +376,10 @@ export function BudgetDetailForm({ budget }: BudgetDetailFormProps) {
           ))}
         </div>
 
-        <FormMessage message={state.error} />
+        <FormMessage
+          message={state.error ?? state.success}
+          tone={state.success ? "success" : "error"}
+        />
         {isDraft ? (
           <SubmitButton label="Guardar ajustes del borrador" pendingLabel="Actualizando..." />
         ) : null}

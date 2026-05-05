@@ -16,6 +16,10 @@ export async function listMechanics() {
   return userRepository.listMechanics();
 }
 
+export async function listLiquidators() {
+  return userRepository.listLiquidators();
+}
+
 export async function createInternalUser(input: unknown) {
   const data = createInternalUserSchema.parse(input);
   const email = data.email.toLowerCase();
@@ -57,6 +61,10 @@ export function getInternalRoleLabel(role: UserRole) {
 
   if (role === UserRole.MECHANIC) {
     return "Mecanico";
+  }
+
+  if (role === UserRole.LIQUIDATOR) {
+    return "Liquidador";
   }
 
   return "Cliente";

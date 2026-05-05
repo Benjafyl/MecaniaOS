@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 
 import { requireApiUser } from "@/modules/auth/auth.service";
+import { setFlashMessage } from "@/lib/flash";
 import {
   deleteBudgetForever,
   deleteClientForever,
@@ -110,6 +111,10 @@ export async function moveToTrashAction(
   }
 
   revalidateTrashRelatedPaths();
+  await setFlashMessage({
+    message: "Elemento movido a papelera correctamente.",
+    tone: "success",
+  });
   redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }
 
@@ -145,6 +150,10 @@ export async function restoreTrashItemAction(
   }
 
   revalidateTrashRelatedPaths();
+  await setFlashMessage({
+    message: "Elemento restaurado correctamente.",
+    tone: "success",
+  });
   redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }
 
@@ -177,5 +186,9 @@ export async function deleteTrashItemForeverAction(
   }
 
   revalidateTrashRelatedPaths();
+  await setFlashMessage({
+    message: "Elemento eliminado definitivamente.",
+    tone: "success",
+  });
   redirect(getRedirectTarget(formData, TRASH_REDIRECTS_BY_ENTITY_TYPE[entityType]));
 }

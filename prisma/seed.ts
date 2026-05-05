@@ -31,6 +31,8 @@ async function main() {
   await prisma.budgetStatusLog.deleteMany();
   await prisma.budgetItem.deleteMany();
   await prisma.budget.deleteMany();
+  await prisma.insuranceCasePhoto.deleteMany();
+  await prisma.insuranceCase.deleteMany();
   await prisma.budgetReferenceCatalog.deleteMany();
   await prisma.selfInspectionStatusLog.deleteMany();
   await prisma.selfInspectionReview.deleteMany();
@@ -53,8 +55,9 @@ async function main() {
   const adminPassword = await hash("Admin1234!", 10);
   const mechanicPassword = await hash("Mechanic1234!", 10);
   const customerPassword = await hash("Cliente1234!", 10);
+  const liquidatorPassword = await hash("Liquidador1234!", 10);
 
-  const [admin, mechanic] = await Promise.all([
+  const [admin, mechanic, liquidator] = await Promise.all([
     prisma.user.create({
       data: {
         name: "Tomas Herrera",
@@ -69,6 +72,14 @@ async function main() {
         email: "mecanico@mecaniaos.local",
         passwordHash: mechanicPassword,
         role: UserRole.MECHANIC,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: "Liquidador",
+        email: "liquidador@mecaniaos.local",
+        passwordHash: liquidatorPassword,
+        role: UserRole.LIQUIDATOR,
       },
     }),
   ]);
@@ -134,6 +145,65 @@ async function main() {
       mileage: 91450,
       fuelType: VehicleFuelType.GASOLINE,
       transmission: VehicleTransmissionType.AUTOMATIC,
+    },
+  });
+
+  const insuranceCaseA = await prisma.insuranceCase.create({
+    data: {
+      caseNumber: "SIN-20260505-001",
+      claimNumber: "CLM-2026-001",
+      policyNumber: "POL-448812",
+      clientId: clientA.id,
+      vehicleId: vehicleA.id,
+      liquidatorId: liquidator.id,
+      incidentDate: new Date("2026-03-08T12:00:00.000Z"),
+      incidentLocation: "Av. Macul con Quilin, Santiago",
+      description:
+        "Impacto delantero izquierdo con dano visible en foco, tapabarro y defensa. Se solicita evaluacion tecnica y economica del taller.",
+      photos: {
+        create: [
+          {
+            fileUrl: "/next.svg",
+            storageKey: "seed/insurance-cases/case-a-front",
+            fileName: "choque-frontal-izquierdo.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+          },
+          {
+            fileUrl: "/window.svg",
+            storageKey: "seed/insurance-cases/case-a-context",
+            fileName: "contexto-choque.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+          },
+        ],
+      },
+    },
+  });
+
+  const insuranceCaseB = await prisma.insuranceCase.create({
+    data: {
+      caseNumber: "SIN-20260505-002",
+      claimNumber: "CLM-2026-002",
+      policyNumber: "POL-551990",
+      clientId: clientB.id,
+      vehicleId: vehicleB.id,
+      liquidatorId: liquidator.id,
+      incidentDate: new Date("2026-03-06T15:30:00.000Z"),
+      incidentLocation: "Ruta 68, km 17",
+      description:
+        "Choque frontal moderado con desalineacion de capot y dano visible en sector delantero. Caso ya aprobado y en seguimiento de reparacion.",
+      photos: {
+        create: [
+          {
+            fileUrl: "/next.svg",
+            storageKey: "seed/insurance-cases/case-b-front",
+            fileName: "frente-siniestrado.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 123456,
+          },
+        ],
+      },
     },
   });
 
@@ -262,6 +332,7 @@ async function main() {
     data: {
       clientId: clientB.id,
       vehicleId: vehicleB.id,
+      insuranceCaseId: insuranceCaseB.id,
       orderNumber: "OT-2026-0002",
       reason: "Mantencion por kilometraje",
       initialDiagnosis: "Cambio de aceite y filtros",
@@ -309,14 +380,16 @@ async function main() {
       budgetNumber: "PRES-2026-0001",
       clientId: clientA.id,
       vehicleId: vehicleA.id,
+      insuranceCaseId: insuranceCaseA.id,
       title: "Presupuesto frenos y mantencion ligera",
       summary:
         "Presupuesto preliminar basado en sintomas reportados por cliente y referencias reales de repuestos/mano de obra para validar aprobacion.",
-      status: BudgetStatus.DRAFT,
+      status: BudgetStatus.SENT,
       subtotalParts: 104980,
       subtotalLabor: 52000,
       subtotalSupplies: 0,
       totalAmount: 156980,
+      sentAt: new Date("2026-03-12T14:00:00.000Z"),
       createdById: admin.id,
       updatedById: admin.id,
       items: {
@@ -370,12 +443,132 @@ async function main() {
         ],
       },
       statusLogs: {
-        create: {
-          previousStatus: null,
-          nextStatus: BudgetStatus.DRAFT,
-          note: "Presupuesto creado para revision interna.",
-          changedById: admin.id,
-        },
+        create: [
+          {
+            previousStatus: null,
+            nextStatus: BudgetStatus.DRAFT,
+            note: "Presupuesto creado para revision interna.",
+            changedById: admin.id,
+          },
+          {
+            previousStatus: BudgetStatus.DRAFT,
+            nextStatus: BudgetStatus.SENT,
+            note: "Presupuesto enviado a cliente y liquidador.",
+            changedById: admin.id,
+            changedAt: new Date("2026-03-12T14:00:00.000Z"),
+          },
+        ],
+      },
+    },
+  });
+
+  await prisma.budget.create({
+    data: {
+      budgetNumber: "PRES-2026-0002",
+      clientId: clientB.id,
+      vehicleId: vehicleB.id,
+      insuranceCaseId: insuranceCaseB.id,
+      workOrderId: workOrderB.id,
+      title: "Presupuesto reparacion frontal Honda Civic",
+      summary:
+        "Presupuesto aprobado por aseguradora y ya convertido en orden de trabajo para seguimiento del liquidador.",
+      status: BudgetStatus.CONVERTED_TO_WORK_ORDER,
+      subtotalParts: 179280,
+      subtotalLabor: 154000,
+      subtotalSupplies: 22000,
+      totalAmount: 355280,
+      sentAt: new Date("2026-03-10T18:00:00.000Z"),
+      approvedAt: new Date("2026-03-11T09:00:00.000Z"),
+      createdById: admin.id,
+      updatedById: mechanic.id,
+      items: {
+        create: [
+          {
+            referenceCatalogId: referenceMap["REP-ELE-001"].id,
+            itemType: BudgetItemType.PART,
+            description: "Bateria 12V 70Ah 680 CCA",
+            referenceCode: "REP-ELE-001",
+            quantity: 1,
+            unitPrice: 114290,
+            subtotal: 114290,
+            sourceLabel: referenceMap["REP-ELE-001"].sourceLabel,
+            sourceUrl: referenceMap["REP-ELE-001"].sourceUrl,
+          },
+          {
+            referenceCatalogId: referenceMap["REP-SUS-001"].id,
+            itemType: BudgetItemType.PART,
+            description: "Amortiguador delantero Toyota Hilux 2005-2024",
+            referenceCode: "REP-SUS-001",
+            quantity: 1,
+            unitPrice: 64990,
+            subtotal: 64990,
+            sourceLabel: referenceMap["REP-SUS-001"].sourceLabel,
+            sourceUrl: referenceMap["REP-SUS-001"].sourceUrl,
+          },
+          {
+            referenceCatalogId: referenceMap["MO-SUS-001"].id,
+            itemType: BudgetItemType.LABOR,
+            description: "Cambio de amortiguadores delanteros",
+            referenceCode: "MO-SUS-001",
+            quantity: 1,
+            unitPrice: 114000,
+            subtotal: 114000,
+            sourceLabel: referenceMap["MO-SUS-001"].sourceLabel,
+            sourceUrl: referenceMap["MO-SUS-001"].sourceUrl,
+          },
+          {
+            itemType: BudgetItemType.SUPPLY,
+            description: "Insumos de enderezado y ajuste frontal",
+            quantity: 1,
+            unitPrice: 22000,
+            subtotal: 22000,
+            sourceLabel: "Ingreso manual",
+            note: "Suministro complementario de reparacion.",
+          },
+          {
+            referenceCatalogId: referenceMap["MO-FRE-001"].id,
+            itemType: BudgetItemType.LABOR,
+            description: "Cambio de pastillas de freno delanteras",
+            referenceCode: "MO-FRE-001",
+            quantity: 1,
+            unitPrice: 40000,
+            subtotal: 40000,
+            sourceLabel: referenceMap["MO-FRE-001"].sourceLabel,
+            sourceUrl: referenceMap["MO-FRE-001"].sourceUrl,
+          },
+        ],
+      },
+      statusLogs: {
+        create: [
+          {
+            previousStatus: null,
+            nextStatus: BudgetStatus.DRAFT,
+            note: "Presupuesto creado desde caso de aseguradora.",
+            changedById: admin.id,
+            changedAt: new Date("2026-03-10T14:00:00.000Z"),
+          },
+          {
+            previousStatus: BudgetStatus.DRAFT,
+            nextStatus: BudgetStatus.SENT,
+            note: "Presupuesto enviado a cliente y liquidador.",
+            changedById: admin.id,
+            changedAt: new Date("2026-03-10T18:00:00.000Z"),
+          },
+          {
+            previousStatus: BudgetStatus.SENT,
+            nextStatus: BudgetStatus.APPROVED,
+            note: "Aprobado por liquidador.",
+            changedById: liquidator.id,
+            changedAt: new Date("2026-03-11T09:00:00.000Z"),
+          },
+          {
+            previousStatus: BudgetStatus.APPROVED,
+            nextStatus: BudgetStatus.CONVERTED_TO_WORK_ORDER,
+            note: `Orden ${workOrderB.orderNumber} creada desde presupuesto aprobado.`,
+            changedById: mechanic.id,
+            changedAt: new Date("2026-03-11T10:30:00.000Z"),
+          },
+        ],
       },
     },
   });
@@ -783,6 +976,7 @@ async function main() {
   console.log(`Admin: admin@mecaniaos.local / Admin1234!`);
   console.log(`Mecanico: mecanico@mecaniaos.local / Mechanic1234!`);
   console.log(`Cliente: maria@example.com / Cliente1234!`);
+  console.log(`Liquidador: liquidador@mecaniaos.local / Liquidador1234!`);
   console.log(`Orden activa de referencia: ${workOrderA.orderNumber}`);
   console.log(`Referencias de presupuesto: ${budgetReferences.length}`);
   console.log(`Autoinspeccion borrador: ${selfInspectionDraft.id}`);

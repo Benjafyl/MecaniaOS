@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { getCurrentSession } from "@/modules/auth/auth.service";
+import { FormMessage } from "@/components/ui/form-message";
+import { consumeFlashMessage } from "@/lib/flash";
+import { getCurrentSession, getDefaultRouteForRole } from "@/modules/auth/auth.service";
 import { logoutAction } from "@/app/(protected)/actions";
 import { purgeExpiredTrash } from "@/modules/trash/trash.service";
 
@@ -15,13 +16,14 @@ export default async function ProtectedLayout({
 }>) {
   await purgeExpiredTrash();
   const session = await getCurrentSession();
+  const flash = await consumeFlashMessage();
 
   if (!session) {
     redirect("/login");
   }
 
-  if (session.user.role === UserRole.CUSTOMER) {
-    redirect("/portal");
+  if (session.user.role !== "ADMIN" && session.user.role !== "MECHANIC") {
+    redirect(getDefaultRouteForRole(session.user.role));
   }
 
   return (
@@ -33,6 +35,7 @@ export default async function ProtectedLayout({
         role: session.user.role,
       }}
     >
+      {flash ? <FormMessage message={flash.message} tone={flash.tone} /> : null}
       {children}
     </AppShell>
   );

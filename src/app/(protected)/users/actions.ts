@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { requireApiUser } from "@/modules/auth/auth.service";
 import { createInternalUser, updateInternalUser } from "@/modules/users/user.service";
@@ -29,6 +30,10 @@ export async function createInternalUserAction(
   }
 
   revalidatePath("/users");
+  await setFlashMessage({
+    message: "Usuario creado correctamente.",
+    tone: "success",
+  });
   redirect("/users");
 }
 
@@ -53,5 +58,9 @@ export async function updateInternalUserAction(
   }
 
   revalidatePath("/users");
+  await setFlashMessage({
+    message: "Usuario actualizado correctamente.",
+    tone: "success",
+  });
   redirect("/users");
 }

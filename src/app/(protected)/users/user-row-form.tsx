@@ -28,15 +28,22 @@ export function UserRowForm({ user }: UserRowFormProps) {
         <Select defaultValue={user.role} name="role">
           <option value={UserRole.ADMIN}>Administrador</option>
           <option value={UserRole.MECHANIC}>Mecanico</option>
+          <option value={UserRole.LIQUIDATOR}>Liquidador</option>
         </Select>
         <Input name="password" placeholder="Nueva contrasena opcional" type="password" />
-        <label className="flex items-center gap-2 rounded-lg border border-[color:var(--border)] px-3 text-sm text-[color:var(--muted-strong)]">
+        <label className="flex min-h-11 items-center gap-2 rounded-xl border border-[color:var(--border)] px-3 text-sm text-[color:var(--muted-strong)]">
           <input defaultChecked={user.active} name="active" type="checkbox" />
           Activo
         </label>
       </div>
-      <FormMessage message={state.error} />
-      <SubmitButton label="Guardar cambios" pendingLabel="Guardando..." />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FormMessage className="sm:max-w-xl" message={state.error} />
+        <SubmitButton
+          className="w-full sm:w-auto"
+          label="Guardar cambios"
+          pendingLabel="Guardando..."
+        />
+      </div>
     </form>
   );
 }

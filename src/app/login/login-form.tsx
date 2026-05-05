@@ -44,7 +44,7 @@ export function LoginForm() {
       <FormMessage className="rounded-2xl" message={state.error} />
 
       <SubmitButton
-        className="min-h-12 w-full rounded-2xl bg-[linear-gradient(180deg,#17345e_0%,#14325a_100%)] shadow-[0_18px_36px_rgba(23,52,94,0.22)] hover:bg-[linear-gradient(180deg,#1b3e70_0%,#173a67_100%)]"
+        className="min-h-12 w-full rounded-2xl bg-[linear-gradient(180deg,#17345e_0%,#14325a_100%)] shadow-[0_18px_36px_rgba(23,52,94,0.22)] hover:shadow-[0_22px_42px_rgba(23,52,94,0.26)]"
         label="Entrar"
         pendingLabel="Ingresando..."
       />

@@ -12,6 +12,7 @@ import {
   updateWorkOrderStatusSchema,
 } from "@/modules/work-orders/work-order.schemas";
 import { saveWorkOrderEvidenceFile } from "@/modules/work-orders/work-order.storage";
+import { findLatestInsuranceCaseLink } from "@/modules/insurance-cases/insurance-case.service";
 import { listMechanics } from "@/modules/users/user.service";
 
 async function assertClientVehicleMatch(clientId: string, vehicleId: string) {
@@ -73,6 +74,7 @@ export async function createWorkOrder(input: unknown, actorId: string) {
   await assertClientVehicleMatch(data.clientId, data.vehicleId);
 
   const orderNumber = await getNextOrderNumber();
+  const insuranceCase = await findLatestInsuranceCaseLink(data.clientId, data.vehicleId);
 
   return prisma.$transaction(async (tx) => {
     const workOrder = await tx.workOrder.create({
@@ -80,6 +82,7 @@ export async function createWorkOrder(input: unknown, actorId: string) {
         orderNumber,
         clientId: data.clientId,
         vehicleId: data.vehicleId,
+        insuranceCaseId: insuranceCase?.id,
         reason: data.reason,
         initialDiagnosis: data.initialDiagnosis,
         status: data.status,

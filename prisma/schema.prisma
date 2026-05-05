@@ -12,6 +12,7 @@ enum UserRole {
   ADMIN
   MECHANIC
   CUSTOMER
+  LIQUIDATOR
 }
 
 enum VehicleFuelType {
@@ -195,6 +196,7 @@ model User {
   createdBudgets              Budget[]                  @relation("BudgetCreatedBy")
   updatedBudgets              Budget[]                  @relation("BudgetUpdatedBy")
   budgetStatusChanges         BudgetStatusLog[]
+  insuranceCases              InsuranceCase[]           @relation("InsuranceCaseLiquidator")
 }
 
 model Session {
@@ -225,6 +227,7 @@ model Client {
   workOrders      WorkOrder[]
   selfInspections SelfInspection[]
   budgets         Budget[]
+  insuranceCases  InsuranceCase[]
 
   @@index([fullName])
   @@index([email])
@@ -251,6 +254,7 @@ model Vehicle {
   workOrders      WorkOrder[]
   selfInspections SelfInspection[]
   budgets         Budget[]
+  insuranceCases  InsuranceCase[]
 
   @@index([clientId])
   @@index([make, model])
@@ -261,6 +265,7 @@ model WorkOrder {
   id                   String               @id @default(cuid())
   clientId             String
   vehicleId            String
+  insuranceCaseId      String?
   orderNumber          String               @unique
   reason               String
   initialDiagnosis     String?
@@ -278,6 +283,7 @@ model WorkOrder {
   updatedAt            DateTime             @updatedAt
   client               Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
   vehicle              Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  insuranceCase        InsuranceCase?       @relation(fields: [insuranceCaseId], references: [id], onDelete: SetNull)
   createdBy            User                 @relation("WorkOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy            User?                @relation("WorkOrderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   assignedTechnician   User?                @relation("WorkOrderAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
@@ -289,6 +295,7 @@ model WorkOrder {
 
   @@index([clientId, intakeDate])
   @@index([vehicleId, intakeDate])
+  @@index([insuranceCaseId, intakeDate])
   @@index([status])
   @@index([assignedTechnicianId, intakeDate])
   @@index([deletedAt, purgeAt])
@@ -531,6 +538,7 @@ model Budget {
   budgetNumber      String            @unique
   clientId          String
   vehicleId         String
+  insuranceCaseId   String?
   selfInspectionId  String?
   workOrderId       String?           @unique
   title             String
@@ -551,6 +559,7 @@ model Budget {
   updatedAt         DateTime          @updatedAt
   client            Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
   vehicle           Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  insuranceCase     InsuranceCase?    @relation(fields: [insuranceCaseId], references: [id], onDelete: SetNull)
   selfInspection    SelfInspection?   @relation(fields: [selfInspectionId], references: [id], onDelete: SetNull)
   workOrder         WorkOrder?        @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
   createdBy         User              @relation("BudgetCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -560,9 +569,50 @@ model Budget {
 
   @@index([clientId, createdAt])
   @@index([vehicleId, createdAt])
+  @@index([insuranceCaseId, createdAt])
   @@index([status, createdAt])
   @@index([selfInspectionId])
   @@index([deletedAt, purgeAt])
+}
+
+model InsuranceCase {
+  id               String               @id @default(cuid())
+  caseNumber       String               @unique
+  claimNumber      String?              @db.VarChar(64)
+  policyNumber     String?              @db.VarChar(64)
+  clientId         String
+  vehicleId        String
+  liquidatorId     String
+  incidentDate     DateTime
+  incidentLocation String?
+  description      String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  client           Client               @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  vehicle          Vehicle              @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  liquidator       User                 @relation("InsuranceCaseLiquidator", fields: [liquidatorId], references: [id], onDelete: Restrict)
+  photos           InsuranceCasePhoto[]
+  budgets          Budget[]
+  workOrders       WorkOrder[]
+
+  @@index([liquidatorId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([vehicleId, createdAt])
+}
+
+model InsuranceCasePhoto {
+  id              String         @id @default(cuid())
+  insuranceCaseId String
+  fileUrl         String
+  storageKey      String         @unique
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  note            String?
+  createdAt       DateTime       @default(now())
+  insuranceCase   InsuranceCase  @relation(fields: [insuranceCaseId], references: [id], onDelete: Cascade)
+
+  @@index([insuranceCaseId, createdAt])
 }
 
 model BudgetItem {

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { requireApiUser } from "@/modules/auth/auth.service";
 import {
@@ -37,6 +38,10 @@ export async function createRepuestoAction(
   }
 
   revalidatePath("/inventory");
+  await setFlashMessage({
+    message: "Repuesto creado correctamente.",
+    tone: "success",
+  });
   redirect("/inventory");
 }
 
@@ -62,6 +67,10 @@ export async function registerStockEntryAction(
   }
 
   revalidatePath("/inventory");
+  await setFlashMessage({
+    message: "Ingreso de stock registrado correctamente.",
+    tone: "success",
+  });
   redirect("/inventory");
 }
 
@@ -87,5 +96,9 @@ export async function adjustStockAction(
   }
 
   revalidatePath("/inventory");
+  await setFlashMessage({
+    message: "Ajuste de stock guardado correctamente.",
+    tone: "success",
+  });
   redirect("/inventory");
 }

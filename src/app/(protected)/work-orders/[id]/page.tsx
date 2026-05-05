@@ -70,6 +70,11 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
               redirectTo="/work-orders/trash"
             />
             <div className="flex flex-wrap gap-3">
+              {workOrder.insuranceCase ? (
+                <Link href={`/insurance-cases/${workOrder.insuranceCase.id}`}>
+                  <Button variant="secondary">Ver siniestro</Button>
+                </Link>
+              ) : null}
               {workOrder.budget ? (
                 <Link href={`/budgets/${workOrder.budget.id}`}>
                   <Button variant="secondary">Ver presupuesto</Button>
@@ -120,6 +125,16 @@ export default async function WorkOrderDetailPage({ params }: WorkOrderDetailPag
                       </p>
                     </div>
                   </div>
+                </div>
+              ) : null}
+              {workOrder.insuranceCase ? (
+                <div className="rounded-xl border border-[rgba(37,99,235,0.18)] bg-[rgba(37,99,235,0.05)] p-4">
+                  <p className="text-sm font-semibold text-[#1d4ed8]">
+                    Caso aseguradora: {workOrder.insuranceCase.caseNumber}
+                  </p>
+                  <p className="mt-1 text-sm text-[#1d4ed8]">
+                    Visible automaticamente para {workOrder.insuranceCase.liquidator.name} en su portal.
+                  </p>
                 </div>
               ) : null}
               <p>

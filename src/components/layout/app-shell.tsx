@@ -14,6 +14,10 @@ function roleLabel(role: UserRole) {
     return "Mecanico";
   }
 
+  if (role === UserRole.LIQUIDATOR) {
+    return "Liquidador";
+  }
+
   return "Cliente";
 }
 
@@ -61,18 +65,35 @@ export function AppShell({ children, user, onLogout }: AppShellProps) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col gap-4">
-        <div className="flex items-center justify-end gap-3 lg:hidden">
-          <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] px-4 py-3">
-            <p className="text-sm font-semibold text-[color:var(--foreground)]">{user.name}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">
-              {roleLabel(user.role)}
-            </p>
+        <div className="rounded-2xl border border-[color:var(--border)] bg-white/[0.88] p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)] lg:hidden">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#5f7fa8]">MecaniaOS</p>
+              <h1 className="mt-2 font-heading text-2xl font-semibold text-[color:var(--foreground)]">
+                Operacion del taller
+              </h1>
+              <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
+                Navegacion rapida y acciones clave adaptadas para oficina y taller.
+              </p>
+            </div>
+            <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface-muted)] px-4 py-3">
+              <p className="text-sm font-semibold text-[color:var(--foreground)]">{user.name}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--muted)]">
+                {roleLabel(user.role)}
+              </p>
+            </div>
           </div>
-          <form action={onLogout}>
-            <Button type="submit" variant="secondary">
-              Salir
-            </Button>
-          </form>
+
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <div className="no-scrollbar overflow-x-auto">
+              <SidebarNav orientation="horizontal" role={user.role} />
+            </div>
+            <form action={onLogout}>
+              <Button type="submit" variant="secondary">
+                Salir
+              </Button>
+            </form>
+          </div>
         </div>
 
         <main className="pb-8">{children}</main>

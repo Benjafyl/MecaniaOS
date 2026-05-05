@@ -6,6 +6,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { BudgetItemType, UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { requireApiUser } from "@/modules/auth/auth.service";
 import {
@@ -265,6 +266,10 @@ export async function createBudgetDraftAction(
     );
 
     revalidatePath("/budgets");
+    await setFlashMessage({
+      message: "Presupuesto creado correctamente.",
+      tone: "success",
+    });
     redirect(`/budgets/${budget.id}`);
   } catch (error) {
     if (isRedirectError(error)) {
@@ -298,7 +303,10 @@ export async function updateBudgetDraftAction(
     revalidatePath("/budgets");
     revalidatePath(`/budgets/${budgetId}`);
     revalidatePath("/portal");
-    return {};
+    revalidatePath("/liquidador");
+    return {
+      success: "Cambios guardados correctamente.",
+    };
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
@@ -330,7 +338,10 @@ export async function transitionBudgetStatusAction(
     revalidatePath("/budgets");
     revalidatePath(`/budgets/${budgetId}`);
     revalidatePath("/portal");
-    return {};
+    revalidatePath("/liquidador");
+    return {
+      success: "Estado del presupuesto actualizado correctamente.",
+    };
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
@@ -358,7 +369,12 @@ export async function createWorkOrderFromBudgetAction(
     revalidatePath("/work-orders");
     revalidatePath(`/work-orders/${workOrder.id}`);
     revalidatePath("/portal");
+    revalidatePath("/liquidador");
     revalidatePath(`/portal/budgets/${budgetId}`);
+    await setFlashMessage({
+      message: "Orden creada desde presupuesto aprobado.",
+      tone: "success",
+    });
     redirect(`/work-orders/${workOrder.id}`);
   } catch (error) {
     if (isRedirectError(error)) {

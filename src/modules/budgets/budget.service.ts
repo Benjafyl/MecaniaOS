@@ -3,6 +3,7 @@ import { BudgetItemType, BudgetStatus, WorkOrderStatus } from "@prisma/client";
 import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { budgetRepository } from "@/modules/budgets/budget.repository";
+import { findLatestInsuranceCaseLink } from "@/modules/insurance-cases/insurance-case.service";
 import {
   budgetLineUpdateSchema,
   createBudgetSchema,
@@ -254,11 +255,13 @@ export async function createBudgetDraft(
 
   const draftItems = [...selectedCatalogItems, ...manualItems];
   const totals = calculateTotals(draftItems);
+  const insuranceCase = await findLatestInsuranceCaseLink(clientId, vehicleId);
 
   return budgetRepository.createDraft({
     budgetNumber: await createBudgetNumber(),
     clientId,
     vehicleId,
+    insuranceCaseId: insuranceCase?.id,
     selfInspectionId,
     title: data.title,
     summary: data.summary,
@@ -383,6 +386,7 @@ export async function createWorkOrderFromBudget(budgetId: string, actorId: strin
         orderNumber,
         clientId: budget.clientId,
         vehicleId: budget.vehicleId,
+        insuranceCaseId: budget.insuranceCaseId,
         reason: `Presupuesto aprobado ${budget.budgetNumber}: ${summarizedItems}`,
         initialDiagnosis:
           budget.summary ?? `Orden creada desde presupuesto aprobado ${budget.budgetNumber}.`,

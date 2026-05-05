@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
 
-import { getCurrentSession } from "@/modules/auth/auth.service";
+import { getCurrentSession, getDefaultRouteForRole } from "@/modules/auth/auth.service";
 import { LoginForm } from "@/app/login/login-form";
 
 export default async function LoginPage() {
   const session = await getCurrentSession();
 
   if (session) {
-    redirect(session.user.role === UserRole.CUSTOMER ? "/portal" : "/dashboard");
+    redirect(getDefaultRouteForRole(session.user.role));
   }
 
   return (

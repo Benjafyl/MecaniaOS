@@ -5,6 +5,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { BudgetStatus } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { respondToCustomerBudget } from "@/modules/customer-portal/customer-portal.service";
 
@@ -31,7 +32,19 @@ export async function respondToCustomerBudgetAction(
     revalidatePath(`/portal/budgets/${budgetId}`);
     revalidatePath("/budgets");
     revalidatePath(`/budgets/${budgetId}`);
-    return {};
+    await setFlashMessage({
+      message:
+        nextStatus === BudgetStatus.APPROVED
+          ? "Presupuesto aprobado correctamente."
+          : "Presupuesto rechazado correctamente.",
+      tone: "success",
+    });
+    return {
+      success:
+        nextStatus === BudgetStatus.APPROVED
+          ? "Presupuesto aprobado correctamente."
+          : "Presupuesto rechazado correctamente.",
+    };
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;

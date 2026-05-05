@@ -20,7 +20,7 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl">
+      <Card className="overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(239,246,255,0.94)_100%)]">
         <div className="space-y-5">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
@@ -32,21 +32,21 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <form className="flex flex-col gap-3 md:flex-row lg:min-w-[520px]" method="get">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <form className="flex flex-col gap-3 sm:flex-row xl:min-w-[520px]" method="get">
               <Input
                 defaultValue={q}
                 name="q"
                 placeholder="Buscar por numero, cliente o vehiculo"
               />
-              <Button type="submit" variant="secondary">
+              <Button className="sm:min-w-[120px]" type="submit" variant="secondary">
                 Buscar
               </Button>
             </form>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link href="/budgets/new">
-                <Button>Nuevo presupuesto</Button>
+                <Button className="w-full sm:w-auto">Nuevo presupuesto</Button>
               </Link>
               <SectionTrashLink href="/budgets/trash" />
             </div>
@@ -81,7 +81,7 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
                   </p>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-4">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   <MiniBudgetStat
                     label="Repuestos"
                     tone="danger"
@@ -105,7 +105,7 @@ export default async function BudgetsPage({ searchParams }: BudgetsPageProps) {
                 </div>
               </div>
 
-              <div className="flex items-start justify-end gap-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <MoveToTrashButton entityId={budget.id} entityType="budget" redirectTo="/budgets" />
                 <div className="flex flex-wrap justify-end gap-3">
                   <Link
@@ -151,7 +151,7 @@ function SummaryStat({
           : "text-[color:var(--foreground)]";
 
   return (
-    <Card className="rounded-xl px-4 py-3">
+    <Card className="rounded-xl bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(247,250,254,0.96))] px-4 py-3">
       <p className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--muted)]">{label}</p>
       <p className={`mt-2 font-heading text-3xl font-semibold ${toneClass}`}>{value}</p>
     </Card>
@@ -175,7 +175,7 @@ function MiniBudgetStat({
         : "border-[color:var(--border)] bg-white/75";
 
   return (
-    <div className={`rounded-lg border px-3 py-2 ${classes}`}>
+    <div className={`rounded-xl border px-3 py-2.5 ${classes}`}>
       <p className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--muted)]">{label}</p>
       <p className="mt-1 font-heading text-base font-semibold text-[color:var(--foreground)]">
         {value}

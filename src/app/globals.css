@@ -3,14 +3,14 @@
 :root {
   --background: #edf3f9;
   --foreground: #0f172a;
-  --surface: rgba(255, 255, 255, 0.86);
-  --surface-strong: #dbe5f0;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-strong: #dfeaf5;
   --surface-muted: #f7fafe;
   --border: rgba(15, 23, 42, 0.08);
   --border-strong: rgba(15, 23, 42, 0.14);
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
-  --success: #1e3a8a;
+  --success: #15803d;
   --info: #2563eb;
   --muted: #64748b;
   --muted-strong: #334155;
@@ -46,7 +46,9 @@ body {
   min-height: 100vh;
   background: var(--background);
   background-image:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 24%),
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 24%),
+    radial-gradient(circle at 85% 15%, rgba(158, 193, 255, 0.22), transparent 18%),
+    radial-gradient(circle at right center, rgba(15, 23, 42, 0.05), transparent 22%),
     linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
   color: var(--foreground);
   font-family: var(--font-manrope), sans-serif;
@@ -75,6 +77,15 @@ textarea {
 .data-grid {
   display: grid;
   gap: 1rem;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media (min-width: 768px) {

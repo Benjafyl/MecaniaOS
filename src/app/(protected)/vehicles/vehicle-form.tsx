@@ -88,7 +88,11 @@ export function VehicleForm({ clients, defaultClientId }: VehicleFormProps) {
       </div>
 
       <FormMessage message={state.error} />
-      <SubmitButton label="Registrar vehiculo" pendingLabel="Guardando vehiculo..." />
+      <SubmitButton
+        className="w-full sm:w-auto"
+        label="Registrar vehiculo"
+        pendingLabel="Guardando vehiculo..."
+      />
     </form>
   );
 }

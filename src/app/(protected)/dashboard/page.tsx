@@ -23,6 +23,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <Card className="overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(239,246,255,0.94)_100%)]">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Panel principal
+            </p>
+            <h1 className="mt-2 font-heading text-3xl font-semibold">
+              Bienvenido, {session?.user.name}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm text-[color:var(--muted-strong)]">
+              Resumen operativo pensado para revisar rapido el taller desde escritorio, tablet o
+              celular sin perder contexto.
+            </p>
+          </div>
+
+          <Link href="/work-orders/new">
+            <Button className="w-full sm:w-auto">Nueva orden</Button>
+          </Link>
+        </div>
+      </Card>
+
       <section className="data-grid">
         {stats.map((stat) => (
           <Card className="rounded-xl" key={stat.key}>
@@ -54,7 +75,7 @@ export default async function DashboardPage() {
           <div className="mt-6 space-y-4">
             {summary.latestOrders.map((order) => (
               <div
-                className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-white/[0.65] p-4 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-white/[0.72] p-4 md:flex-row md:items-center md:justify-between"
                 key={order.id}
               >
                 <div>
@@ -70,11 +91,14 @@ export default async function DashboardPage() {
                   <p className="mt-1 text-sm text-[color:var(--muted)]">{order.reason}</p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <p className="text-sm text-[color:var(--muted)]">
                     Ingreso {formatDate(order.intakeDate)}
                   </p>
-                  <Link className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]" href={`/work-orders/${order.id}`}>
+                  <Link
+                    className="text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+                    href={`/work-orders/${order.id}`}
+                  >
                     Ver detalle
                   </Link>
                 </div>

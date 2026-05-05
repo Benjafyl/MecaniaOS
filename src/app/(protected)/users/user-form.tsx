@@ -44,12 +44,19 @@ export function UserForm() {
           <Select defaultValue={UserRole.MECHANIC} id="role" name="role">
             <option value={UserRole.ADMIN}>Administrador</option>
             <option value={UserRole.MECHANIC}>Mecanico</option>
+            <option value={UserRole.LIQUIDATOR}>Liquidador</option>
           </Select>
         </div>
       </div>
 
-      <FormMessage message={state.error} />
-      <SubmitButton label="Crear usuario interno" pendingLabel="Creando usuario..." />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <FormMessage className="sm:max-w-xl" message={state.error} />
+        <SubmitButton
+          className="w-full sm:w-auto"
+          label="Crear usuario interno"
+          pendingLabel="Creando usuario..."
+        />
+      </div>
     </form>
   );
 }

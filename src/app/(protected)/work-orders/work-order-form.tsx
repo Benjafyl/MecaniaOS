@@ -180,7 +180,11 @@ export function WorkOrderForm({
       </div>
 
       <FormMessage message={state.error} />
-      <SubmitButton label="Crear orden de trabajo" pendingLabel="Guardando orden..." />
+      <SubmitButton
+        className="w-full sm:w-auto"
+        label="Crear orden de trabajo"
+        pendingLabel="Guardando orden..."
+      />
     </form>
   );
 }

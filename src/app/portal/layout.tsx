@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
-import { getCurrentSession } from "@/modules/auth/auth.service";
+import { FormMessage } from "@/components/ui/form-message";
+import { consumeFlashMessage } from "@/lib/flash";
+import { getCurrentSession, getDefaultRouteForRole } from "@/modules/auth/auth.service";
 import { logoutAction } from "@/app/(protected)/actions";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +15,14 @@ export default async function CustomerPortalLayout({
   children: React.ReactNode;
 }>) {
   const session = await getCurrentSession();
+  const flash = await consumeFlashMessage();
 
   if (!session) {
     redirect("/login");
   }
 
-  if (session.user.role !== UserRole.CUSTOMER) {
-    redirect("/dashboard");
+  if (session.user.role !== "CUSTOMER") {
+    redirect(getDefaultRouteForRole(session.user.role));
   }
 
   return (
@@ -70,7 +72,10 @@ export default async function CustomerPortalLayout({
           </div>
         </header>
 
-        <main className="pb-8">{children}</main>
+        <main className="space-y-4 pb-8">
+          {flash ? <FormMessage message={flash.message} tone={flash.tone} /> : null}
+          {children}
+        </main>
       </div>
     </div>
   );

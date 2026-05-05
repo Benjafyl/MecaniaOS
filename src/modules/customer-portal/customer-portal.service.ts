@@ -103,6 +103,12 @@ export async function getCustomerPortalOverview() {
           },
         },
         include: {
+          insuranceCase: {
+            select: {
+              id: true,
+              caseNumber: true,
+            },
+          },
           vehicle: true,
           workOrder: true,
           items: {
@@ -153,7 +159,9 @@ export async function getCustomerPortalOverview() {
   const readyForDelivery = vehicles.filter(
     (vehicle) => vehicle.currentOrder?.status === WorkOrderStatus.READY_FOR_DELIVERY,
   ).length;
-  const pendingBudgets = budgets.filter((budget) => budget.status === BudgetStatus.SENT).length;
+  const pendingBudgets = budgets.filter(
+    (budget) => budget.status === BudgetStatus.SENT && !budget.insuranceCase,
+  ).length;
 
   return {
     customer,
@@ -256,6 +264,12 @@ export async function getCustomerPortalBudgetDetail(budgetId: string) {
       },
     },
     include: {
+      insuranceCase: {
+        select: {
+          id: true,
+          caseNumber: true,
+        },
+      },
       client: true,
       vehicle: true,
       workOrder: true,
@@ -297,6 +311,12 @@ export async function respondToCustomerBudget(
 
   if (budget.status !== BudgetStatus.SENT) {
     throw new UnauthorizedError("Este presupuesto ya no admite respuesta del cliente");
+  }
+
+  if (budget.insuranceCase) {
+    throw new UnauthorizedError(
+      "Este presupuesto esta siendo revisado por la aseguradora desde el portal del liquidador",
+    );
   }
 
   const changedAt = new Date();

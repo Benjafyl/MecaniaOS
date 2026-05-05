@@ -190,8 +190,10 @@ export default async function CustomerBudgetDetailPage({
                   Tu respuesta
                 </p>
                 <h2 className="mt-2 font-heading text-2xl font-semibold">
-                  {budget.status === BudgetStatus.SENT
-                    ? "Responder al presupuesto"
+                  {budget.insuranceCase
+                    ? "Revision por aseguradora"
+                    : budget.status === BudgetStatus.SENT
+                      ? "Responder al presupuesto"
                     : budget.status === BudgetStatus.APPROVED
                       ? "Presupuesto aprobado"
                       : budget.status === BudgetStatus.REJECTED
@@ -199,8 +201,10 @@ export default async function CustomerBudgetDetailPage({
                         : "Presupuesto convertido en orden"}
                 </h2>
                 <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-                  {budget.status === BudgetStatus.SENT
-                    ? "Si estas de acuerdo, apruebalo para que el taller pueda continuar. Si no, puedes rechazarlo desde aqui."
+                  {budget.insuranceCase
+                    ? `Este caso esta asociado a la solicitud ${budget.insuranceCase.caseNumber}. El liquidador de la aseguradora es quien aprueba o rechaza este presupuesto.`
+                    : budget.status === BudgetStatus.SENT
+                      ? "Si estas de acuerdo, apruebalo para que el taller pueda continuar. Si no, puedes rechazarlo desde aqui."
                     : budget.status === BudgetStatus.APPROVED
                       ? "Ya aprobaste este presupuesto desde tu portal."
                       : budget.status === BudgetStatus.REJECTED
@@ -209,7 +213,9 @@ export default async function CustomerBudgetDetailPage({
                 </p>
               </div>
 
-              <PortalBudgetResponseForm budgetId={budget.id} status={budget.status} />
+              {budget.insuranceCase ? null : (
+                <PortalBudgetResponseForm budgetId={budget.id} status={budget.status} />
+              )}
 
               {budget.status === BudgetStatus.CONVERTED_TO_WORK_ORDER && budget.workOrder ? (
                 <div className="rounded-xl border border-[rgba(22,163,74,0.18)] bg-[rgba(22,163,74,0.06)] p-4">

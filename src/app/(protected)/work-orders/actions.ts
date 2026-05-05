@@ -6,6 +6,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { requireApiUser } from "@/modules/auth/auth.service";
 import {
@@ -21,7 +22,7 @@ export async function createWorkOrderAction(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const session = await requireApiUser();
+    const session = await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
     await createWorkOrder(
       {
@@ -47,6 +48,10 @@ export async function createWorkOrderAction(
   }
 
   revalidatePath("/work-orders");
+  await setFlashMessage({
+    message: "Orden de trabajo creada correctamente.",
+    tone: "success",
+  });
   redirect("/work-orders");
 }
 
@@ -57,7 +62,7 @@ export async function updateWorkOrderAssignmentAction(
   const orderId = String(formData.get("orderId") ?? "");
 
   try {
-    const session = await requireApiUser();
+    const session = await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
     await updateWorkOrderAssignment(
       orderId,
@@ -78,6 +83,11 @@ export async function updateWorkOrderAssignmentAction(
 
   revalidatePath("/work-orders");
   revalidatePath(`/work-orders/${orderId}`);
+  revalidatePath("/liquidador");
+  await setFlashMessage({
+    message: "Responsable actualizado correctamente.",
+    tone: "success",
+  });
   redirect(`/work-orders/${orderId}`);
 }
 
@@ -88,7 +98,7 @@ export async function updateWorkOrderStatusAction(
   const orderId = String(formData.get("orderId") ?? "");
 
   try {
-    const session = await requireApiUser();
+    const session = await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
     await updateWorkOrderStatus(
       orderId,
@@ -110,6 +120,11 @@ export async function updateWorkOrderStatusAction(
 
   revalidatePath("/work-orders");
   revalidatePath(`/work-orders/${orderId}`);
+  revalidatePath("/liquidador");
+  await setFlashMessage({
+    message: "Estado de la orden actualizado correctamente.",
+    tone: "success",
+  });
   redirect(`/work-orders/${orderId}`);
 }
 
@@ -121,7 +136,7 @@ export async function addWorkOrderEvidenceAction(
   const file = formData.get("file");
 
   try {
-    const session = await requireApiUser();
+    const session = await requireApiUser([UserRole.ADMIN, UserRole.MECHANIC]);
 
     if (!(file instanceof File)) {
       throw new Error("Debe adjuntar una imagen");
@@ -146,6 +161,11 @@ export async function addWorkOrderEvidenceAction(
   }
 
   revalidatePath(`/work-orders/${orderId}`);
+  revalidatePath("/liquidador");
+  await setFlashMessage({
+    message: "Evidencia subida correctamente.",
+    tone: "success",
+  });
   redirect(`/work-orders/${orderId}`);
 }
 
@@ -179,5 +199,10 @@ export async function setWorkOrderPartUsageAction(
   revalidatePath("/inventory");
   revalidatePath("/work-orders");
   revalidatePath(`/work-orders/${orderId}`);
+  revalidatePath("/liquidador");
+  await setFlashMessage({
+    message: "Uso de repuesto actualizado correctamente.",
+    tone: "success",
+  });
   redirect(`/work-orders/${orderId}`);
 }

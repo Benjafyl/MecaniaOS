@@ -101,6 +101,11 @@ export function BudgetCreateForm({
   const availableVehicles = selectedClientId
     ? vehicles.filter((vehicle) => vehicle.clientId === selectedClientId)
     : [];
+  const selectedClient = clients.find((client) => client.id === selectedClientId);
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId);
+  const activePartSlots = partSlots.slice(0, visiblePartSlots).length;
+  const activeLaborSlots = laborSlots.slice(0, visibleLaborSlots).length;
+  const activeSupplySlots = supplySlots.slice(0, visibleSupplySlots).length;
 
   function handleClientChange(event: ChangeEvent<HTMLSelectElement>) {
     const nextClientId = event.target.value;
@@ -144,9 +149,48 @@ export function BudgetCreateForm({
       <input name="clientId" type="hidden" value={selectedClientId} />
       <input name="vehicleId" type="hidden" value={selectedVehicleId} />
 
-      <Card className="rounded-2xl">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-2 lg:col-span-2">
+      <Card className="overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,250,254,0.96))]">
+        <div className="space-y-6">
+          <div className="grid gap-3 lg:grid-cols-3">
+            <SourceModeCard
+              description="Selecciona una inspeccion revisada y el sistema completa cliente y vehiculo."
+              isActive={Boolean(selectedInspection)}
+              title="Desde autoinspeccion"
+            />
+            <SourceModeCard
+              description="Si el caso llego directo al taller, completa cliente, vehiculo y resumen manualmente."
+              isActive={!selectedInspection}
+              title="Desde registro manual"
+            />
+            <SourceModeCard
+              description="El borrador sigue editable y despues se puede enviar al cliente o liquidador segun corresponda."
+              isActive={Boolean(selectedClientId && selectedVehicleId)}
+              title="Flujo conectado"
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SelectionStat label="Cliente" value={selectedClient?.fullName ?? "Pendiente"} />
+            <SelectionStat
+              label="Vehiculo"
+              value={
+                selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model}` : "Pendiente"
+              }
+            />
+            <SelectionStat label="Repuestos activos" value={String(activePartSlots)} />
+            <SelectionStat
+              label="Items referenciales"
+              value={String(activeLaborSlots + activeSupplySlots)}
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2 lg:col-span-2">
+              <SectionHeading
+                description="Puedes iniciar desde una autoinspeccion ya revisada o dejarlo vacio y trabajar el caso manualmente."
+                eyebrow="Contexto del caso"
+                title="Origen y vinculacion"
+              />
             <label
               className="text-sm font-medium text-[color:var(--muted-strong)]"
               htmlFor="selfInspectionId"
@@ -171,7 +215,7 @@ export function BudgetCreateForm({
               vehiculo del presupuesto.
             </p>
             {selectedInspection ? (
-              <p className="text-sm text-[#1d4ed8]">
+              <p className="rounded-xl border border-[rgba(37,99,235,0.14)] bg-[rgba(37,99,235,0.08)] px-4 py-3 text-sm font-medium text-[#1d4ed8]">
                 Cliente y vehiculo completados automaticamente desde la autoinspeccion.
               </p>
             ) : null}
@@ -237,22 +281,16 @@ export function BudgetCreateForm({
             />
           </div>
         </div>
+        </div>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,250,254,0.96))]">
         <div className="space-y-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-              Repuestos conectados a inventario
-            </p>
-            <h2 className="mt-2 font-heading text-2xl font-semibold">
-              {BUDGET_ITEM_TYPE_LABELS[BudgetItemType.PART]}
-            </h2>
-            <p className="mt-2 text-sm text-[color:var(--muted)]">
-              Selecciona repuestos reales del inventario. El valor unitario se completa
-              automaticamente y solo ajustas la cantidad.
-            </p>
-          </div>
+          <SectionHeading
+            description="Selecciona repuestos reales del inventario. El valor unitario se completa automaticamente y solo ajustas la cantidad."
+            eyebrow="Repuestos conectados a inventario"
+            title={BUDGET_ITEM_TYPE_LABELS[BudgetItemType.PART]}
+          />
 
           <div className="space-y-4">
             {partSlots.slice(0, visiblePartSlots).map((slot) => {
@@ -260,7 +298,7 @@ export function BudgetCreateForm({
 
               return (
                 <div
-                  className="grid gap-4 rounded-2xl border border-[color:var(--border)] bg-white p-4 lg:grid-cols-[1.8fr_180px_140px]"
+                  className="grid gap-4 rounded-2xl border border-[rgba(37,99,235,0.10)] bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)] lg:grid-cols-[1.8fr_180px_140px]"
                   key={`part-slot-${slot}`}
                 >
                   <div className="space-y-2">
@@ -334,6 +372,7 @@ export function BudgetCreateForm({
 
             {visiblePartSlots < partSlots.length ? (
               <Button
+                className="w-full sm:w-auto"
                 onClick={() => setVisiblePartSlots((current) => Math.min(current + 1, partSlots.length))}
                 type="button"
                 variant="secondary"
@@ -353,19 +392,16 @@ export function BudgetCreateForm({
           type === BudgetItemType.LABOR ? visibleLaborManualSlots : visibleSupplyManualSlots;
 
         return (
-          <Card className="rounded-2xl" key={type}>
+          <Card
+            className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,250,254,0.96))]"
+            key={type}
+          >
             <div className="space-y-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-                  Catalogo referencial
-                </p>
-                <h2 className="mt-2 font-heading text-2xl font-semibold">
-                  {BUDGET_ITEM_TYPE_LABELS[type]}
-                </h2>
-                <p className="mt-2 text-sm text-[color:var(--muted)]">
-                  Selecciona un item del catalogo y el valor unitario se completa automaticamente.
-                </p>
-              </div>
+              <SectionHeading
+                description="Selecciona un item del catalogo y el valor unitario se completa automaticamente."
+                eyebrow="Catalogo referencial"
+                title={BUDGET_ITEM_TYPE_LABELS[type]}
+              />
 
               {groupedReferences[type].length === 0 ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -379,7 +415,7 @@ export function BudgetCreateForm({
 
                     return (
                       <div
-                        className="grid gap-4 rounded-2xl border border-[color:var(--border)] bg-white p-4 lg:grid-cols-[1.8fr_180px_140px]"
+                        className="grid gap-4 rounded-2xl border border-[rgba(37,99,235,0.10)] bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)] lg:grid-cols-[1.8fr_180px_140px]"
                         key={`${type}-slot-${slot}`}
                       >
                         <div className="space-y-2">
@@ -455,6 +491,7 @@ export function BudgetCreateForm({
 
                   {visibleSlots < slots.length ? (
                     <Button
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         if (type === BudgetItemType.LABOR) {
                           setVisibleLaborSlots((current) => Math.min(current + 1, laborSlots.length));
@@ -502,6 +539,7 @@ export function BudgetCreateForm({
                 />
               ) : (
                 <Button
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     if (type === BudgetItemType.LABOR) {
                       setShowLaborManual(true);
@@ -522,19 +560,13 @@ export function BudgetCreateForm({
       })}
 
       {showPartManual ? (
-        <Card className="rounded-2xl">
+        <Card className="rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,250,254,0.96))]">
           <div className="space-y-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-                Respaldo manual
-              </p>
-              <h2 className="mt-2 font-heading text-2xl font-semibold">
-                {BUDGET_ITEM_TYPE_LABELS[BudgetItemType.PART]} fuera del inventario
-              </h2>
-              <p className="mt-2 text-sm text-[color:var(--muted)]">
-                Usa este bloque solo si el repuesto aun no esta cargado en inventario.
-              </p>
-            </div>
+            <SectionHeading
+              description="Usa este bloque solo si el repuesto aun no esta cargado en inventario."
+              eyebrow="Respaldo manual"
+              title={`${BUDGET_ITEM_TYPE_LABELS[BudgetItemType.PART]} fuera del inventario`}
+            />
 
             <ManualFallbackRows
               itemType={BudgetItemType.PART}
@@ -553,13 +585,41 @@ export function BudgetCreateForm({
           </div>
         </Card>
       ) : (
-        <Button onClick={() => setShowPartManual(true)} type="button" variant="secondary">
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => setShowPartManual(true)}
+          type="button"
+          variant="secondary"
+        >
           Agregar repuesto manual
         </Button>
       )}
 
-      <FormMessage message={state.error} />
-      <SubmitButton label="Crear presupuesto borrador" pendingLabel="Creando presupuesto..." />
+      <Card className="sticky bottom-4 rounded-2xl border-[rgba(37,99,235,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(239,246,255,0.96))] shadow-[0_18px_40px_rgba(15,23,42,0.10)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Guardado del borrador
+            </p>
+            <h2 className="mt-2 font-heading text-2xl font-semibold">
+              Presupuesto listo para continuar el flujo
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-[color:var(--muted-strong)]">
+              Al guardar, quedara disponible para seguir editando, enviarlo a cliente o derivarlo
+              a aseguradora cuando corresponda.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[280px]">
+            <FormMessage message={state.error} />
+            <SubmitButton
+              className="w-full"
+              label="Crear presupuesto borrador"
+              pendingLabel="Creando presupuesto..."
+            />
+          </div>
+        </div>
+      </Card>
     </form>
   );
 }
@@ -580,7 +640,7 @@ function ManualFallbackSection({
   title: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--surface)] p-4">
+    <div className="rounded-2xl border border-dashed border-[rgba(37,99,235,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(239,246,255,0.82))] p-4">
       <div>
         <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
           Respaldo manual
@@ -621,7 +681,7 @@ function ManualFallbackRows({
     <div className="space-y-4">
       {manualSlots.map((slot) => (
         <div
-          className="grid gap-3 rounded-2xl border border-[color:var(--border)] bg-white p-4 lg:grid-cols-[2fr_140px_140px]"
+          className="grid gap-3 rounded-2xl border border-[rgba(37,99,235,0.10)] bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)] lg:grid-cols-[2fr_140px_140px]"
           key={`${itemType}-${slot}`}
         >
           <div className="space-y-2 lg:col-span-3">
@@ -687,10 +747,75 @@ function ManualFallbackRows({
       ))}
 
       {onAddMore ? (
-        <Button onClick={onAddMore} type="button" variant="secondary">
+        <Button className="w-full sm:w-auto" onClick={onAddMore} type="button" variant="secondary">
           Agregar otro item manual
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+function SectionHeading({
+  description,
+  eyebrow,
+  title,
+}: {
+  description: string;
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">{eyebrow}</p>
+      <h2 className="mt-2 font-heading text-2xl font-semibold text-[color:var(--foreground)]">
+        {title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{description}</p>
+    </div>
+  );
+}
+
+function SourceModeCard({
+  description,
+  isActive,
+  title,
+}: {
+  description: string;
+  isActive: boolean;
+  title: string;
+}) {
+  return (
+    <div
+      className={
+        isActive
+          ? "rounded-2xl border border-[rgba(37,99,235,0.20)] bg-[linear-gradient(180deg,rgba(37,99,235,0.10),rgba(255,255,255,0.94))] p-4 shadow-[0_14px_28px_rgba(37,99,235,0.08)]"
+          : "rounded-2xl border border-[color:var(--border)] bg-white/78 p-4"
+      }
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-heading text-lg font-semibold text-[color:var(--foreground)]">{title}</h2>
+        <span
+          className={
+            isActive
+              ? "rounded-full bg-[#2563eb] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white"
+              : "rounded-full bg-[color:var(--surface-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-strong)]"
+          }
+        >
+          {isActive ? "Activo" : "Disponible"}
+        </span>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-[color:var(--muted-strong)]">{description}</p>
+    </div>
+  );
+}
+
+function SelectionStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[rgba(37,99,235,0.12)] bg-white/85 px-4 py-3 shadow-[0_10px_24px_rgba(37,99,235,0.05)]">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">{label}</p>
+      <p className="mt-2 min-h-[2.75rem] text-sm font-semibold leading-5 text-[color:var(--foreground)]">
+        {value}
+      </p>
     </div>
   );
 }

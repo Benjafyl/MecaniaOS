@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { optionalText, requiredText } from "@/lib/validation";
 
-const internalRoleSchema = z.enum([UserRole.ADMIN, UserRole.MECHANIC]);
+const internalRoleSchema = z.enum([UserRole.ADMIN, UserRole.MECHANIC, UserRole.LIQUIDATOR]);
 
 export const createInternalUserSchema = z.object({
   name: requiredText(3, 120),

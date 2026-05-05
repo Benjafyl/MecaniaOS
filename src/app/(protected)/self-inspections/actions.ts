@@ -6,6 +6,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { UserRole } from "@prisma/client";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { requireApiUser } from "@/modules/auth/auth.service";
 import {
@@ -28,6 +29,10 @@ export async function createSelfInspectionInviteAction(
     const invite = await createSelfInspectionInvite({});
 
     revalidatePath("/self-inspections");
+    await setFlashMessage({
+      message: "Autoinspeccion creada correctamente.",
+      tone: "success",
+    });
     redirect(`/self-inspections/${invite.inspectionId}?token=${invite.token}`);
   } catch (error) {
     if (isRedirectError(error)) {
@@ -72,6 +77,10 @@ export async function reviewSelfInspectionAction(
   }
 
   revalidatePath(`/self-inspections/${inspectionId}`);
+  await setFlashMessage({
+    message: "Revision guardada correctamente.",
+    tone: "success",
+  });
   redirect(`/self-inspections/${inspectionId}`);
 }
 
@@ -102,5 +111,9 @@ export async function updateSelfInspectionStatusAction(
   }
 
   revalidatePath(`/self-inspections/${inspectionId}`);
+  await setFlashMessage({
+    message: "Estado actualizado correctamente.",
+    tone: "success",
+  });
   redirect(`/self-inspections/${inspectionId}`);
 }

@@ -38,6 +38,13 @@ export default async function BudgetDetailPage({ params }: BudgetDetailPageProps
                 id: budget.selfInspection.id,
               }
             : null,
+          insuranceCase: budget.insuranceCase
+            ? {
+                id: budget.insuranceCase.id,
+                caseNumber: budget.insuranceCase.caseNumber,
+                liquidatorName: budget.insuranceCase.liquidator.name,
+              }
+            : null,
           client: {
             fullName: budget.client.fullName,
           },

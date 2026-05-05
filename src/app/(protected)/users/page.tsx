@@ -15,18 +15,29 @@ export default async function UsersPage() {
   }
 
   const users = await listInternalUsers();
+  const activeUsers = users.filter((user) => user.active).length;
+  const mechanics = users.filter((user) => user.role === UserRole.MECHANIC).length;
+  const liquidators = users.filter((user) => user.role === UserRole.LIQUIDATOR).length;
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl">
-        <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
-            Control de acceso
-          </p>
-          <h1 className="mt-2 font-heading text-3xl font-semibold">Usuarios internos</h1>
-          <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-            Crea usuarios del taller y ajusta su rol o estado sin salir del panel.
-          </p>
+      <Card className="overflow-hidden rounded-2xl bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(239,246,255,0.94)_100%)]">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">
+              Control de acceso
+            </p>
+            <h1 className="mt-2 font-heading text-3xl font-semibold">Usuarios internos</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[color:var(--muted-strong)]">
+              Crea usuarios del taller y ajusta su rol o estado sin salir del panel.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <HeroStat label="Activos" value={activeUsers} />
+            <HeroStat label="Mecanicos" value={mechanics} />
+            <HeroStat label="Liquidadores" value={liquidators} />
+          </div>
         </div>
       </Card>
 
@@ -55,6 +66,17 @@ export default async function UsersPage() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeroStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-[rgba(37,99,235,0.12)] bg-white/80 px-4 py-3 shadow-[0_10px_24px_rgba(37,99,235,0.06)]">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">{label}</p>
+      <p className="mt-2 font-heading text-3xl font-semibold text-[color:var(--foreground)]">
+        {value}
+      </p>
     </div>
   );
 }

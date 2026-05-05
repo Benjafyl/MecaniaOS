@@ -82,7 +82,7 @@ export default async function CustomerPortalPage() {
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
               Vehiculos
@@ -109,7 +109,7 @@ export default async function CustomerPortalPage() {
             </p>
             <p className="mt-2 font-heading text-3xl font-semibold">{portal.stats.readyForDelivery}</p>
           </div>
-          <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4 md:col-span-2 lg:col-span-1">
+          <div className="rounded-xl border border-[color:var(--border)] bg-white/75 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted)]">
               Presupuestos pendientes
             </p>
@@ -128,7 +128,8 @@ export default async function CustomerPortalPage() {
               Revision y respuesta del cliente
             </h2>
             <p className="mt-2 text-sm text-[color:var(--muted-strong)]">
-              Cuando el taller te envia un presupuesto, aqui puedes revisar el detalle completo y responder desde tu propia cuenta.
+              Cuando el taller te envia un presupuesto, aqui puedes revisar el detalle completo.
+              Si el caso pasa por aseguradora, la aprobacion queda en manos del liquidador.
             </p>
           </div>
 
@@ -175,7 +176,9 @@ export default async function CustomerPortalPage() {
 
                 <p className="mt-4 text-sm text-[color:var(--muted)]">
                   {budget.status === "SENT"
-                    ? "Tienes una respuesta pendiente para este presupuesto."
+                    ? budget.insuranceCase
+                      ? "Este presupuesto esta siendo revisado por la aseguradora asignada."
+                      : "Tienes una respuesta pendiente para este presupuesto."
                     : budget.status === "APPROVED"
                       ? "Ya aprobaste este presupuesto y el taller puede continuar el flujo."
                       : budget.status === "REJECTED"

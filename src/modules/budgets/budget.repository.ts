@@ -5,6 +5,18 @@ import { prisma } from "@/lib/prisma";
 const budgetListInclude = {
   client: true,
   vehicle: true,
+  insuranceCase: {
+    select: {
+      id: true,
+      caseNumber: true,
+      liquidator: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
   items: {
     orderBy: [{ itemType: "asc" }, { description: "asc" }],
   },
@@ -13,6 +25,17 @@ const budgetListInclude = {
 const budgetDetailInclude = {
   client: true,
   vehicle: true,
+  insuranceCase: {
+    include: {
+      liquidator: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  },
   selfInspection: true,
   workOrder: true,
   createdBy: true,
@@ -166,6 +189,7 @@ export const budgetRepository = {
     budgetNumber: string;
     clientId: string;
     vehicleId: string;
+    insuranceCaseId?: string;
     selfInspectionId?: string;
     title: string;
     summary?: string;
@@ -192,6 +216,7 @@ export const budgetRepository = {
         budgetNumber: input.budgetNumber,
         clientId: input.clientId,
         vehicleId: input.vehicleId,
+        insuranceCaseId: input.insuranceCaseId,
         selfInspectionId: input.selfInspectionId,
         title: input.title,
         summary: input.summary,

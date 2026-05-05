@@ -61,6 +61,19 @@ export const workOrderRepository = {
       include: {
         client: true,
         vehicle: true,
+        insuranceCase: {
+          select: {
+            id: true,
+            caseNumber: true,
+            liquidator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         createdBy: {
           select: {
             id: true,
@@ -95,6 +108,19 @@ export const workOrderRepository = {
       include: {
         client: true,
         vehicle: true,
+        insuranceCase: {
+          select: {
+            id: true,
+            caseNumber: true,
+            liquidator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
         createdBy: {
           select: {
             id: true,

@@ -55,7 +55,10 @@ export function PortalBudgetResponseForm({
         </Button>
       </div>
 
-      <FormMessage message={state.error} />
+      <FormMessage
+        message={state.error ?? state.success}
+        tone={state.success ? "success" : "error"}
+      />
     </form>
   );
 }

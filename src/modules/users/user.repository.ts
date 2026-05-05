@@ -7,7 +7,7 @@ export const userRepository = {
     return prisma.user.findMany({
       where: {
         role: {
-          in: [UserRole.ADMIN, UserRole.MECHANIC],
+          in: [UserRole.ADMIN, UserRole.MECHANIC, UserRole.LIQUIDATOR],
         },
       },
       orderBy: [
@@ -25,6 +25,25 @@ export const userRepository = {
     return prisma.user.findMany({
       where: {
         role: UserRole.MECHANIC,
+        active: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+      },
+    });
+  },
+
+  listLiquidators() {
+    return prisma.user.findMany({
+      where: {
+        role: UserRole.LIQUIDATOR,
         active: true,
       },
       orderBy: {

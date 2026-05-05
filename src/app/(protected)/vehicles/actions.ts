@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { createVehicle } from "@/modules/vehicles/vehicle.service";
 import { requireApiUser } from "@/modules/auth/auth.service";
@@ -32,5 +33,9 @@ export async function createVehicleAction(
   }
 
   revalidatePath("/vehicles");
+  await setFlashMessage({
+    message: "Vehiculo creado correctamente.",
+    tone: "success",
+  });
   redirect("/vehicles");
 }

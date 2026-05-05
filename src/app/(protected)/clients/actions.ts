@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getErrorMessage } from "@/lib/errors";
+import { setFlashMessage } from "@/lib/flash";
 import type { ActionState } from "@/lib/form-state";
 import { createClient } from "@/modules/clients/client.service";
 import { requireApiUser } from "@/modules/auth/auth.service";
@@ -30,5 +31,9 @@ export async function createClientAction(
   }
 
   revalidatePath("/clients");
+  await setFlashMessage({
+    message: "Cliente creado correctamente.",
+    tone: "success",
+  });
   redirect("/clients");
 }
